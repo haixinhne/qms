@@ -1,0 +1,247 @@
+import { Version } from "@microsoft/sp-core-library";
+import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
+import type { IReadonlyTheme } from "@microsoft/sp-component-base";
+import { escape } from "@microsoft/sp-lodash-subset";
+import styles from "./HelloWorldWebPart.module.scss";
+import * as strings from "HelloWorldWebPartStrings";
+import * as XLSX from "xlsx";
+
+//Hải add
+import {
+  SPHttpClient,
+  SPHttpClientResponse,
+  ISPHttpClientOptions,
+} from "@microsoft/sp-http";
+
+const options: ISPHttpClientOptions = {
+  headers: {
+    accept: "application/json; odata=verbose",
+    "content-type": "application/json; odata=verbose",
+  },
+};
+
+const fileUrl = "/sites/QMS/Shared Documents/future.xlsx";
+
+export interface IHelloWorldWebPartProps {
+  description: string;
+}
+
+//Hải add
+export interface ISPLists {
+  value: ISPList[];
+}
+
+export interface ISPList {
+  Title: string;
+  Id: string;
+}
+
+export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorldWebPartProps> {
+  private _environmentMessage: string = "";
+
+  public render(): void {
+    this.domElement.innerHTML = `
+    <section class="${styles.helloWorld} ${
+      !!this.context.sdks.microsoftTeams ? styles.teams : ""
+    }">
+
+     <div class="${styles.welcome}">    
+        <h2>Hello, ${escape(this.context.pageContext.user.displayName)}</h2>
+       <div>${this._environmentMessage}</div>
+        <button class="${
+          styles.qms_button
+        }" id="createFolderButton">Create Folder</button>
+     </div>  
+    </section>`;
+    //Hành động nhấn nút
+    const buttonClick = this.domElement.querySelector("#createFolderButton");
+    if (buttonClick) {
+      buttonClick.addEventListener("click", () => this._onClickButton());
+    }
+
+    this._renderListAsync();
+  }
+
+  protected onInit(): Promise<void> {
+    return this._getEnvironmentMessage().then((message) => {
+      this._environmentMessage = message;
+    });
+  }
+
+  private _renderList(items: ISPList[]): void {
+    let html: string = "";
+    items.forEach((item: ISPList) => {
+      html += `
+  <ul class="${styles.list}">
+    <li class="${styles.listItem}">
+      <span class="ms-font-l">${item.Title}</span>
+    </li>
+  </ul>`;
+    });
+
+    if (this.domElement.querySelector("#spListContainer") != null) {
+      this.domElement.querySelector("#spListContainer")!.innerHTML = html;
+    }
+  }
+
+  private _renderListAsync(): void {
+    this._getListData()
+      .then((response) => {
+        this._renderList(response.value);
+      })
+      .catch(() => {});
+  }
+
+  //Hải add
+  private _getListData(): Promise<ISPLists> {
+    return this.context.spHttpClient
+      .get(
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/lists?$filter=Hidden eq false`,
+        SPHttpClient.configurations.v1
+      )
+      .then((response: SPHttpClientResponse) => {
+        return response.json();
+      })
+      .catch(() => {});
+  }
+
+  //Hàm lấy file excel
+  private _getFileFromSharePoint(fileUrl: string): Promise<ArrayBuffer> {
+    return this.context.spHttpClient
+      .get(
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${fileUrl}')/$value`,
+        SPHttpClient.configurations.v1
+      )
+      .then((response: SPHttpClientResponse) => {
+        return response.arrayBuffer();
+      })
+      .catch((error) => {
+        console.error("Error fetching file:", error);
+        throw error;
+      });
+  }
+
+  //Hàm đọc nội dung file excel
+  private _readExcelData(fileContent: ArrayBuffer): string[] {
+    const data = new Uint8Array(fileContent);
+    const workbook = XLSX.read(data, { type: "array" });
+
+    //lấy sheet đầu tiên
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+
+    //chuyển đổi sheet thành mảng JSON
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    //lấy tên các tên thư mục nằm ở cột đầu tiên
+    //const folderNames = jsonData
+    //  .slice(1)
+    //  .map((row: any) => row[0])
+    //  .filter(Boolean);
+
+    //lấy tên các tên thư mục nằm ở hàng đầu tiên
+    const folderNames = (jsonData[0] as any[]).filter(Boolean);
+
+    return folderNames;
+  }
+
+  //Hàm tạo folder
+  private _createFolder(folderName: string): Promise<any> {
+    return this.context.spHttpClient
+      .post(
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/${folderName}')`,
+        SPHttpClient.configurations.v1,
+        options
+      )
+      .then((response: SPHttpClientResponse) => {
+        return response.json();
+      })
+      .catch(() => {});
+  }
+
+  //Hành động nhấn nút tạo folder
+  private _onClickButton(): void {
+    //Tải file Excel từ SharePoint
+    this._getFileFromSharePoint(fileUrl)
+      .then((fileContent: ArrayBuffer) => {
+        //Đọc danh sách tên thư mục từ file Excel
+        const folderNames = this._readExcelData(fileContent);
+        //Tạo thư mục trong SharePoint cho mỗi tên thư mục
+        folderNames.forEach((folderName: string) => {
+          this._createFolder(folderName)
+            .then(() => {
+              console.log(`Created folder: ${folderName}`);
+            })
+            .catch((error) => {
+              console.error(`Error creating folder: ${folderName}`, error);
+            });
+        });
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
+  }
+
+  private _getEnvironmentMessage(): Promise<string> {
+    if (!!this.context.sdks.microsoftTeams) {
+      //running in Teams, office.com or Outlook
+      return this.context.sdks.microsoftTeams.teamsJs.app
+        .getContext()
+        .then((context) => {
+          let environmentMessage: string = "";
+          switch (context.app.host.name) {
+            case "Office": // running in Office
+              environmentMessage = this.context.isServedFromLocalhost
+                ? strings.AppLocalEnvironmentOffice
+                : strings.AppOfficeEnvironment;
+              break;
+            case "Outlook": // running in Outlook
+              environmentMessage = this.context.isServedFromLocalhost
+                ? strings.AppLocalEnvironmentOutlook
+                : strings.AppOutlookEnvironment;
+              break;
+            case "Teams": // running in Teams
+            case "TeamsModern":
+              environmentMessage = this.context.isServedFromLocalhost
+                ? strings.AppLocalEnvironmentTeams
+                : strings.AppTeamsTabEnvironment;
+              break;
+            default:
+              environmentMessage = strings.UnknownEnvironment;
+          }
+
+          return environmentMessage;
+        });
+    }
+
+    return Promise.resolve(
+      this.context.isServedFromLocalhost
+        ? strings.AppLocalEnvironmentSharePoint
+        : strings.AppSharePointEnvironment
+    );
+  }
+
+  protected onThemeChanged(currentTheme: IReadonlyTheme | undefined): void {
+    if (!currentTheme) {
+      return;
+    }
+
+    const { semanticColors } = currentTheme;
+
+    if (semanticColors) {
+      this.domElement.style.setProperty(
+        "--bodyText",
+        semanticColors.bodyText || null
+      );
+      this.domElement.style.setProperty("--link", semanticColors.link || null);
+      this.domElement.style.setProperty(
+        "--linkHovered",
+        semanticColors.linkHovered || null
+      );
+    }
+  }
+
+  protected get dataVersion(): Version {
+    return Version.parse("1.0");
+  }
+}
