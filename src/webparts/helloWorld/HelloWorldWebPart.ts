@@ -4,7 +4,7 @@ import type { IReadonlyTheme } from "@microsoft/sp-component-base";
 import { escape } from "@microsoft/sp-lodash-subset";
 import styles from "./HelloWorldWebPart.module.scss";
 import * as strings from "HelloWorldWebPartStrings";
-import * as XLSX from "xlsx";
+//import * as XLSX from "xlsx";
 
 //Hải add
 import {
@@ -20,7 +20,7 @@ const options: ISPHttpClientOptions = {
   },
 };
 
-const fileUrl = "/sites/QMS/Shared Documents/future.xlsx";
+//const fileUrl = "/sites/QMS/Shared Documents/future.xlsx";
 
 export interface IHelloWorldWebPartProps {
   description: string;
@@ -105,44 +105,177 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .catch(() => {});
   }
 
-  //Hàm lấy file excel
-  private _getFileFromSharePoint(fileUrl: string): Promise<ArrayBuffer> {
+  // //Hàm lấy file excel
+  // private _getFileFromSharePoint(fileUrl: string): Promise<ArrayBuffer> {
+  //   return this.context.spHttpClient
+  //     .get(
+  //       `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${fileUrl}')/$value`,
+  //       SPHttpClient.configurations.v1
+  //     )
+  //     .then((response: SPHttpClientResponse) => {
+  //       return response.arrayBuffer();
+  //     })
+  //     .catch((error) => {
+  //       console.error("Error fetching file:", error);
+  //       throw error;
+  //     });
+  // }
+
+  // //Hàm đọc nội dung file excel
+  // private _readExcelData(fileContent: ArrayBuffer): string[] {
+  //   const data = new Uint8Array(fileContent);
+  //   const workbook = XLSX.read(data, { type: "array" });
+
+  //   //lấy sheet đầu tiên
+  //   const firstSheetName = workbook.SheetNames[0];
+  //   const worksheet = workbook.Sheets[firstSheetName];
+
+  //   //chuyển đổi sheet thành mảng JSON
+  //   const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+  //   //lấy tên các tên thư mục nằm ở cột đầu tiên
+  //   const folderNames = jsonData
+  //     .slice(1)
+  //     .map((row: any) => row[0])
+  //     .filter(Boolean);
+
+  //   //lấy tên các tên thư mục nằm ở hàng đầu tiên
+  //   //const folderNames = (jsonData[0] as any[]).filter(Boolean);
+
+  //   return folderNames;
+  // }
+
+  // // Hàm tạo subfolder
+  // private _createSubfolder(
+  //   parentFolderName: string,
+  //   subFolderName: string
+  // ): Promise<any> {
+  //   return this.context.spHttpClient
+  //     .post(
+  //       `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/${parentFolderName}/${subFolderName}')`,
+  //       SPHttpClient.configurations.v1,
+  //       options
+  //     )
+  //     .then((response: SPHttpClientResponse) => {
+  //       if (!response.ok) {
+  //         throw new Error(`Error creating subfolder: ${response.statusText}`);
+  //       }
+  //       return response.json();
+  //     })
+  //     .catch((error) => {
+  //       console.error(
+  //         `Error creating subfolder: ${subFolderName} inside ${parentFolderName}`,
+  //         error
+  //       );
+  //     });
+  // }
+
+  // //Hàm tạo folder
+  // private _createFolder(folderName: string): Promise<any> {
+  //   return this.context.spHttpClient
+  //     .post(
+  //       `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/${folderName}')`,
+  //       SPHttpClient.configurations.v1,
+  //       options
+  //     )
+  //     .then((response: SPHttpClientResponse) => {
+  //       return response.json().then(() => {
+  //         // Tạo 3 folder con bên trong folder chính
+  //         return Promise.all([
+  //           this._createSubfolder(folderName, "00_ESSENTIAL"),
+  //           this._createSubfolder(folderName, "01_WORK"),
+  //           this._createSubfolder(folderName, "02_SUBMIT"),
+  //         ]);
+  //       });
+  //     })
+  //     .catch(() => {});
+  // }
+
+  // //Hành động nhấn nút tạo folder
+  // private _onClickButton(): void {
+  //   //Tải file Excel từ SharePoint
+  //   this._getFileFromSharePoint(fileUrl)
+  //     .then((fileContent: ArrayBuffer) => {
+  //       //Đọc danh sách tên thư mục từ file Excel
+  //       const folderNames = this._readExcelData(fileContent);
+  //       //Tạo thư mục trong SharePoint cho mỗi tên thư mục
+  //       folderNames.forEach((folderName: string) => {
+  //         this._createFolder(folderName)
+  //           .then(() => {
+  //             console.log(`Created folder: ${folderName}`);
+  //           })
+  //           .catch((error) => {
+  //             console.error(`Error creating folder: ${folderName}`, error);
+  //           });
+  //       });
+  //     })
+  //     .catch((error) => {
+  //       console.error("Error:", error);
+  //     });
+  // }
+
+  // // Hàm lấy dữ liệu từ SharePoint list (Lấy tên thư mục cần tạo theo tên của các item)
+  // private _getFileFromSharePoint(): Promise<string[]> {
+  //   const listUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Test_Excel')/items`;
+
+  //   return this.context.spHttpClient
+  //     .get(listUrl, SPHttpClient.configurations.v1)
+  //     .then((response: SPHttpClientResponse) => {
+  //       return response.json();
+  //     })
+  //     .then((data: any) => {
+  //       const folderNames = data.value
+  //         .map((item: any) => item.Title) // item.tên cột chứa tên thư mục
+  //         .filter(Boolean);
+
+  //       return folderNames;
+  //     })
+  //     .catch((error) => {
+  //       console.error("Error fetching SharePoint list data:", error);
+  //       throw error;
+  //     });
+  // }
+
+  // Hàm lấy dữ liệu từ SharePoint list (Lấy tên thư mục cần tạo theo tên của các cột)
+  private _getFileFromSharePoint(): Promise<string[]> {
+    const listUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Test_Excel')/items`;
+
     return this.context.spHttpClient
-      .get(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${fileUrl}')/$value`,
-        SPHttpClient.configurations.v1
-      )
+      .get(listUrl, SPHttpClient.configurations.v1)
       .then((response: SPHttpClientResponse) => {
-        return response.arrayBuffer();
+        return response.json();
+      })
+      .then((data: any) => {
+        console.log(data.value);
+        console.log("API data:", data);
+        //const firstItem = data.value[0];
+        //const folderNames = Object.keys(firstItem);
+        const folderNames = data.value
+          .filter((field: any) => !field.Hidden)
+          .map((field: any) => field.InternalName);
+        return folderNames;
       })
       .catch((error) => {
-        console.error("Error fetching file:", error);
+        console.error("Lỗi lấy tên cột:", error);
         throw error;
       });
   }
 
-  //Hàm đọc nội dung file excel
-  private _readExcelData(fileContent: ArrayBuffer): string[] {
-    const data = new Uint8Array(fileContent);
-    const workbook = XLSX.read(data, { type: "array" });
-
-    //lấy sheet đầu tiên
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
-
-    //chuyển đổi sheet thành mảng JSON
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-    //lấy tên các tên thư mục nằm ở cột đầu tiên
-    //const folderNames = jsonData
-    //  .slice(1)
-    //  .map((row: any) => row[0])
-    //  .filter(Boolean);
-
-    //lấy tên các tên thư mục nằm ở hàng đầu tiên
-    const folderNames = (jsonData[0] as any[]).filter(Boolean);
-
-    return folderNames;
+  // Hàm tạo subfolder
+  private _createSubfolder(
+    parentFolderName: string,
+    subFolderName: string
+  ): Promise<any> {
+    return this.context.spHttpClient
+      .post(
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/${parentFolderName}/${subFolderName}')`,
+        SPHttpClient.configurations.v1,
+        options
+      )
+      .then((response: SPHttpClientResponse) => {
+        return response.json();
+      })
+      .catch((error) => {});
   }
 
   //Hàm tạo folder
@@ -156,29 +289,33 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .then((response: SPHttpClientResponse) => {
         return response.json();
       })
+      .then(() => {
+        // Tạo 3 folder con bên trong folder chính
+        return Promise.all([
+          this._createSubfolder(folderName, "00_ESSENTIAL"),
+          this._createSubfolder(folderName, "01_WORK"),
+          this._createSubfolder(folderName, "02_SUBMIT"),
+        ]);
+      })
       .catch(() => {});
   }
 
-  //Hành động nhấn nút tạo folder
+  // Hành động nhấn nút tạo folder
   private _onClickButton(): void {
-    //Tải file Excel từ SharePoint
-    this._getFileFromSharePoint(fileUrl)
-      .then((fileContent: ArrayBuffer) => {
-        //Đọc danh sách tên thư mục từ file Excel
-        const folderNames = this._readExcelData(fileContent);
-        //Tạo thư mục trong SharePoint cho mỗi tên thư mục
+    this._getFileFromSharePoint()
+      .then((folderNames: string[]) => {
         folderNames.forEach((folderName: string) => {
           this._createFolder(folderName)
             .then(() => {
-              console.log(`Created folder: ${folderName}`);
+              console.log(`Tạo thành công: ${folderName}`);
             })
             .catch((error) => {
-              console.error(`Error creating folder: ${folderName}`, error);
+              console.error(`Tạo không thành công: ${folderName}`, error);
             });
         });
       })
       .catch((error) => {
-        console.error("Error:", error);
+        console.error("Lỗi:", error);
       });
   }
 
