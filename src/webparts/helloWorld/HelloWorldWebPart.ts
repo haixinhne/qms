@@ -20,7 +20,7 @@ const options: ISPHttpClientOptions = {
   },
 };
 
-const siteUrl = "https://iscapevn.sharepoint.com/sites/QMS";
+const excelUrl = "/sites/QMS/Shared Documents/Book1.xlsx";
 
 export interface IHelloWorldWebPartProps {
   description: string;
@@ -120,12 +120,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Phần tạo sharepoint list từ excel
   //Hàm lấy file excel
-  private getFileExcelFromSharePoint(ExcelUrl: string): Promise<ArrayBuffer> {
+  private getFileExcelFromSharePoint(excelUrl: string): Promise<ArrayBuffer> {
     return this.context.spHttpClient
       .get(
-        `${
-          this.context.pageContext.web.absoluteUrl
-        }/_api/web/GetFileByServerRelativeUrl('${"/sites/QMS/Shared Documents/Book1.xlsx"}')/$value`,
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${excelUrl}')/$value`,
         SPHttpClient.configurations.v1
       )
       .then((response: SPHttpClientResponse) => {
@@ -150,7 +148,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
     //lấy tên các tên thư mục nằm ở cột đầu tiên
-    const folderNameSharepoint = jsonData
+    const nameSharepoint = jsonData
       .slice(1)
       .map((row: any) => row[0])
       .filter(Boolean);
@@ -158,29 +156,27 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     //lấy tên các tên thư mục nằm ở hàng đầu tiên
     //const folderNames = (jsonData[0] as any[]).filter(Boolean);
 
-    return folderNameSharepoint;
+    return nameSharepoint;
   }
 
   // Hàm tạo SharePoint list
-  private createSharePointList(listName: string): Promise<any> {
+  private async createSharePointList(listName: string): Promise<any> {
     const body = JSON.stringify({
       __metadata: { type: "SP.List" },
-      Title: listName,
-      AllowContentTypes: true,
       BaseTemplate: 100,
-      ContentTypesEnabled: true,
-      Description: "Danh sách được tạo tự động",
+      Title: listName,
     });
 
     const optionsJson: ISPHttpClientOptions = {
       headers: {
         Accept: "application/json;odata=verbose",
         "Content-Type": "application/json;odata=verbose",
+        "odata-version": "",
       },
       body: body,
     };
 
-    return this.context.spHttpClient
+    return await this.context.spHttpClient
       .post(
         `${this.context.pageContext.web.absoluteUrl}/_api/web/lists`, // API để tạo SharePoint list
         SPHttpClient.configurations.v1,
@@ -192,32 +188,29 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         } else {
           return response.json().then((errorResponse) => {
             console.error("Error response:", errorResponse);
-            console.error("In ra file Json:", optionsJson);
           });
         }
       })
       .catch((error) => {
         console.error("Tạo thất bại:", error);
-        throw error; // Ném lỗi để có thể xử lý ở nơi khác nếu cần
       });
   }
 
   //Hành động nhấn nút tạo folder
   private _onClickButtonCreateSharepoint(): void {
     //Tải file Excel từ SharePoint
-    this.getFileExcelFromSharePoint(siteUrl)
+    this.getFileExcelFromSharePoint(excelUrl)
       .then((fileContent: ArrayBuffer) => {
         //Đọc danh sách tên thư mục từ file Excel
         const readExcel = this.readFileExcelFromSharePoint(fileContent);
         //Tạo SharePoint list cho mỗi tên thư mục
         readExcel.forEach((listSharepoint: string) => {
-          this.createSharePointList("Hải xinh nè")
+          this.createSharePointList(listSharepoint)
             .then(() => {
               console.log(`Tạo thành công: ${listSharepoint}`);
             })
             .catch((error) => {
               console.error(`Tạo thất bại: ${listSharepoint}`, error);
-              console.log(`JSON ${readExcel}`);
             });
         });
       })
