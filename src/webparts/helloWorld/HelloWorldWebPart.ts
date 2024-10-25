@@ -57,6 +57,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
      </div>
      </div>     
      </section>`;
+
     //Hành động nhấn nút
     const buttonClick = this.domElement.querySelector("#createFolderButton");
     if (buttonClick) {
@@ -105,7 +106,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .catch(() => {});
   }
 
-  //Hải add
   private _getListData(): Promise<ISPLists> {
     return this.context.spHttpClient
       .get(
@@ -118,7 +118,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .catch(() => {});
   }
 
-  //Phần tạo sharepoint list từ excel
+  //Tạo sharepoint list từ excel----------------------------------------------------------------------------------------------------------------------------------
   //Hàm lấy file excel
   private getFileExcelFromSharePoint(excelUrl: string): Promise<ArrayBuffer> {
     return this.context.spHttpClient
@@ -135,31 +135,18 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Hàm đọc nội dung file excel
+  //Hàm đọc nội dung file excel (lấy tên các cột)
   private readFileExcelFromSharePoint(fileContent: ArrayBuffer): string[] {
     const data = new Uint8Array(fileContent);
     const workbook = XLSX.read(data, { type: "array" });
-
-    //lấy sheet đầu tiên
     const firstSheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[firstSheetName];
-
-    //chuyển đổi sheet thành mảng JSON
     const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-    //lấy tên các tên thư mục nằm ở cột đầu tiên
-    const nameSharepoint = jsonData
-      .slice(1)
-      .map((row: any) => row[0])
-      .filter(Boolean);
-
-    //lấy tên các tên thư mục nằm ở hàng đầu tiên
-    //const folderNames = (jsonData[0] as any[]).filter(Boolean);
-
-    return nameSharepoint;
+    const nameColumnSharepointList = (jsonData[0] as any[]).filter(Boolean);
+    return nameColumnSharepointList;
   }
 
-  // Hàm tạo SharePoint list
+  // Tạo SharePoint list
   private async createSharePointList(listName: string): Promise<any> {
     const body = JSON.stringify({
       __metadata: { type: "SP.List" },
@@ -178,7 +165,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
     return await this.context.spHttpClient
       .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/lists`, // API để tạo SharePoint list
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/lists`,
         SPHttpClient.configurations.v1,
         optionsJson
       )
@@ -192,35 +179,78 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         }
       })
       .catch((error) => {
-        console.error("Tạo thất bại:", error);
+        console.error("Error creating:", error);
       });
   }
 
-  //Hành động nhấn nút tạo folder
-  private _onClickButtonCreateSharepoint(): void {
-    //Tải file Excel từ SharePoint
-    this.getFileExcelFromSharePoint(excelUrl)
-      .then((fileContent: ArrayBuffer) => {
-        //Đọc danh sách tên thư mục từ file Excel
-        const readExcel = this.readFileExcelFromSharePoint(fileContent);
-        //Tạo SharePoint list cho mỗi tên thư mục
-        readExcel.forEach((listSharepoint: string) => {
-          this.createSharePointList(listSharepoint)
-            .then(() => {
-              console.log(`Tạo thành công: ${listSharepoint}`);
-            })
-            .catch((error) => {
-              console.error(`Tạo thất bại: ${listSharepoint}`, error);
-            });
-        });
+  private async createColumnInSharePoint(
+    listName: string,
+    columnName: string
+  ): Promise<any> {
+    const body = JSON.stringify({
+      __metadata: { type: "SP.Field" },
+      Title: columnName,
+      FieldTypeKind: 2, // FieldTypeKind 2 tương ứng với cột kiểu Văn bản
+    });
+
+    const optionsJson: ISPHttpClientOptions = {
+      headers: {
+        Accept: "application/json;odata=verbose",
+        "Content-Type": "application/json;odata=verbose",
+        "odata-version": "",
+      },
+      body: body,
+    };
+
+    return await this.context.spHttpClient
+      .post(
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getbytitle('${listName}')/fields`,
+        SPHttpClient.configurations.v1,
+        optionsJson
+      )
+      .then((response: SPHttpClientResponse) => {
+        if (response.ok) {
+          return response.json();
+        } else {
+          return response.json().then((errorResponse) => {
+            console.error("Error response:", errorResponse);
+          });
+        }
       })
       .catch((error) => {
-        console.error("Error loading Excel file from SharePoint:", error);
+        console.error("Error adding column:", error);
       });
   }
 
-  //Phần tạo các thư mục con từ sharepoint
-  // Hàm lấy dữ liệu từ SharePoint list (Lấy tên thư mục cần tạo theo tên của các item (theo hàng ngang))
+  // Click Tạo SharePoint List
+  private _onClickButtonCreateSharepoint(): void {
+    const listNameSharePoint = "QMS_Excel";
+
+    this.createSharePointList(listNameSharePoint)
+      .then(() => {
+        console.log(`Created successfully: ${listNameSharePoint}`);
+
+        return this.getFileExcelFromSharePoint(excelUrl);
+      })
+      .then((fileContent: ArrayBuffer) => {
+        const columnNameExcel = this.readFileExcelFromSharePoint(fileContent);
+
+        const createColumnName = columnNameExcel.map((columnName) => {
+          return this.createColumnInSharePoint(listNameSharePoint, columnName);
+        });
+
+        return Promise.all(createColumnName);
+      })
+      .then(() => {
+        console.log("All columns created successfully.");
+      })
+      .catch((error) => {
+        console.error("Click Created Error:", error);
+      });
+  }
+
+  //Tạo các thư mục con từ sharepoint------------------------------------------------------------------------------------------------------------------------------
+  // Hàm lấy dữ liệu từ SharePoint list (Lấy tên thư mục cần tạo theo tên của các item (hàng ngang))
   private _getFileFromSharePoint(): Promise<string[]> {
     const listUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('TestExcel')/items`;
 
@@ -288,10 +318,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         folderNames.forEach((folderName: string) => {
           this._createFolder(folderName)
             .then(() => {
-              console.log(`Tạo thành công: ${folderName}`);
+              console.log(`Created successfully: ${folderName}`);
             })
             .catch((error) => {
-              console.error(`Tạo không thành công: ${folderName}`, error);
+              console.error(`Error creating:: ${folderName}`, error);
             });
         });
       })
