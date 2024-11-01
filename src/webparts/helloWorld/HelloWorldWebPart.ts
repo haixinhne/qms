@@ -150,7 +150,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
       return rowObject;
     });
-    console.log("Items", nameItems);
     return { nameColumnSharepoint, nameItems };
   }
 
@@ -189,16 +188,41 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         console.error("Error creating:", error);
       });
   }
+
+  //Check các cột đã tồn tại ở sharepoint
+  private async getExistingColumns(listName: string): Promise<string[]> {
+    const response = await this.context.spHttpClient.get(
+      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/fields?$select=Title`,
+      SPHttpClient.configurations.v1
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.value.map((field: { Title: string }) => field.Title);
+    } else {
+      console.error("Error fetching columns.");
+      return [];
+    }
+  }
+
   // Tạo cột Sharepoint list
   private async createColumnInSharePoint(
     listName: string,
-    columnName: string
+    columnNames: string
   ): Promise<any> {
+    const existingColumns = await this.getExistingColumns(listName);
+
+    if (existingColumns.indexOf(columnNames) !== -1) {
+      console.log(`Column "${columnNames}" already exists.`);
+      return;
+    }
+
     const body = JSON.stringify({
       __metadata: { type: "SP.Field" },
-      Title: columnName,
+      Title: columnNames,
       FieldTypeKind: 2,
     });
+
     const optionsHTTP: ISPHttpClientOptions = {
       headers: {
         Accept: "application/json;odata=verbose",
@@ -216,6 +240,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       )
       .then((response: SPHttpClientResponse) => {
         if (response.ok) {
+          console.log(`New column created: ${columnNames}`);
           return response.json();
         } else {
           return response.json().then((errorResponse) => {
@@ -228,20 +253,37 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Hàm caps lock chữ cái đầu
-  private capsLocksFirstLetter(text: string): string {
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  }
-
   //Tạo items
   private async createItemsInSharePointList(
     listName: string,
     itemData: any
   ): Promise<void> {
-    const capsLockListName = this.capsLocksFirstLetter(listName);
+    const capsLocksFirstLetter = (text: string): string => {
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    };
+    const listNameUpdate = capsLocksFirstLetter(listName);
+
+    //Check sự tồn tại của item dựa vào cột Device
+    const checkExistingItem = await this.context.spHttpClient.get(
+      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items?$filter=Device eq '${itemData.Device}'`,
+      SPHttpClient.configurations.v1
+    );
+    //Lưu kết quả các items nếu tồn tại
+    const existingItems = await checkExistingItem.json();
+    const saveExistingItem = existingItems.value && existingItems.value[0];
+
+    //Nếu item đã tồn tại thì update, nếu ko thì tạo mới
+    let endpoint = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items`;
+    let method = "POST"; // default là để tạo mới
+
+    if (saveExistingItem) {
+      endpoint += `(${saveExistingItem.Id})`;
+      method = "MERGE"; //update
+    }
+
     const bodyObject: Record<string, any> = {
       __metadata: {
-        type: `SP.Data.${capsLockListName}ListItem`,
+        type: `SP.Data.${listNameUpdate}ListItem`,
       },
       Title: itemData.Title || "QMS",
     };
@@ -257,25 +299,29 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         Accept: "application/json;odata=verbose",
         "Content-Type": "application/json;odata=verbose",
         "odata-version": "",
+        "If-Match": "*",
+        "X-HTTP-Method": method,
       },
       body: body,
     };
 
     return await this.context.spHttpClient
-      .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items`,
-        SPHttpClient.configurations.v1,
-        optionsHTTP
-      )
+      .post(endpoint, SPHttpClient.configurations.v1, optionsHTTP)
       .then((response: SPHttpClientResponse) => {
-        if (!response.ok) {
+        if (response.ok) {
+          if (method === "POST") {
+            console.log(`Item created: Device = ${itemData.Device}`);
+          } else if (method === "MERGE") {
+            console.log("Item updated!");
+          }
+        } else {
           return response.json().then((errorResponse) => {
             console.error("Error response:", errorResponse);
           });
         }
       })
       .catch((error) => {
-        console.error("Error adding item:", error);
+        console.error("Error adding or updating item:", error);
       });
   }
 
@@ -306,7 +352,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return nameColumnSharepoint
           .reduce((promise, createColumn) => {
             return promise.then(() => {
-              console.log(`Adding column: ${createColumn}`);
               return this.createColumnInSharePoint(
                 listNameSharePoint,
                 createColumn
@@ -320,9 +365,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             nameItems,
           }));
       })
-      //Tạo items
+
+      //Tạo items, update items
       .then(({ nameColumnSharepoint, nameItems }) => {
-        console.log("All columns created successfully.");
         console.log("Input data", nameItems);
         return nameItems.reduce((promise, itemData) => {
           const itemObject = nameColumnSharepoint.reduce((obj, columnName) => {
@@ -333,9 +378,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             this.createItemsInSharePointList(listNameSharePoint, itemObject)
           );
         }, Promise.resolve());
-      })
-      .then(() => {
-        console.log("All items created successfully.");
       })
       .catch((error) => {
         console.error("Click Created Error:", error);
@@ -358,7 +400,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .then((data: any) => {
         console.log("Data", data);
         const folderNames = data.value
-          .map((item: any) => item.Name) //Cột lấy tên folder
+          .map((item: any) => item.Device) //Cột lấy tên folder
           .filter(Boolean);
 
         return folderNames;
@@ -378,6 +420,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       headers: {
         accept: "application/json; odata=verbose",
         "content-type": "application/json; odata=verbose",
+        "odata-version": "",
       },
     };
     return this.context.spHttpClient
@@ -398,6 +441,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       headers: {
         accept: "application/json; odata=verbose",
         "content-type": "application/json; odata=verbose",
+        "odata-version": "",
       },
     };
     return this.context.spHttpClient
