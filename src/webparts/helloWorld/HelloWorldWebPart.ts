@@ -214,6 +214,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
     if (existingColumns.indexOf(columnNames) !== -1) {
       console.log(`Column "${columnNames}" already exists.`);
+      alert(`Column "${columnNames}" already exists.`);
       return;
     }
 
@@ -241,6 +242,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .then((response: SPHttpClientResponse) => {
         if (response.ok) {
           console.log(`New column created: ${columnNames}`);
+          alert(`New column created: ${columnNames}`);
           return response.json();
         } else {
           return response.json().then((errorResponse) => {
@@ -311,8 +313,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         if (response.ok) {
           if (method === "POST") {
             console.log(`Item created: Device = ${itemData.Device}`);
+            alert(`Item created: Device = ${itemData.Device}`);
           } else if (method === "MERGE") {
             console.log("Item updated!");
+            alert("Item updated");
           }
         } else {
           return response.json().then((errorResponse) => {
@@ -343,6 +347,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           document.getElementById("titleSharepointList") as HTMLInputElement
         ).value = "";
         console.log(`Created successfully: ${listNameSharePoint}`);
+        alert(`Created successfully: ${listNameSharePoint}`);
       })
       //Tạo cột từ file excel
       .then(() => this.getFileExcelFromSharePoint(excelUrl))
@@ -380,7 +385,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         }, Promise.resolve());
       })
       .catch((error) => {
-        console.error("Click Created Error:", error);
+        console.error("Error:", error);
       });
   }
 
@@ -475,7 +480,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                   "titleSharepointList"
                 ) as HTMLInputElement
               ).value = "";
-              console.log(`Created successfully: ${folderName}`);
+              console.log(`Created folder: ${folderName}`);
+              alert(`Created folder: ${folderName}`);
             })
             .catch((error) => {
               console.error(`Error creating:: ${folderName}`, error);
@@ -483,7 +489,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         });
       })
       .catch((error) => {
-        console.error("Lỗi:", error);
+        console.error("Error", error);
       });
   }
 
