@@ -51,8 +51,13 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         }" id="createFolderButton">Create Folder</button>
         <button class="${
           styles.qms_button
-        }" id="createSharepointButton">Create Sharepoint</button>       
-     </div>
+        }" id="createSharepointButton">Create Sharepoint</button>
+
+         <button class="${
+           styles.qms_button
+         }" id="setPermissions">Permissions</button>
+        
+        </div>
      </div>     
      </section>`;
 
@@ -69,15 +74,15 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       buttonClickCreateSharepoint.addEventListener("click", () =>
         this.onClickButtonCreateSharepoint()
       );
-
-      // const buttonClickDeleted = this.domElement.querySelector(
-      //   "#createSharepointButton"
-      // );
-      // if (buttonClickDeleted) {
-      //   buttonClickDeleted.addEventListener("click", () =>
-      //     this.deleteItems()
-      //   );
     }
+
+    // const setPermissions = this.domElement.querySelector("#setPermissions");
+    // if (setPermissions) {
+    //   setPermissions.addEventListener("click", () =>
+    //     this.setCustomPermissions()
+    //   );
+    // }
+
     this.renderListAsync();
   }
 
@@ -361,50 +366,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         console.error("Error adding or updating item:", error);
       });
   }
-  //Items cần xóa để tạo trong thư mục lưu trữ
-  private async createItemInDeletedFolder(
-    folderUrl: string,
-    itemData: any
-  ): Promise<void> {
-    const body = JSON.stringify(itemData);
-    const optionsHTTP: ISPHttpClientOptions = {
-      headers: {
-        Accept: "application/json;odata=verbose",
-        "Content-Type": "application/json;odata=verbose",
-        "odata-version": "",
-      },
-      body: body,
-    };
 
-    // Construct the URL for the POST request
-    const requestUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/files/add(url='${itemData.Title}.json', overwrite=true)`;
-
-    try {
-      const response = await this.context.spHttpClient.post(
-        requestUrl,
-        SPHttpClient.configurations.v1,
-        optionsHTTP
-      );
-
-      // Check if the response is successful
-      if (response.ok) {
-        console.log(`Item created in Deleted folder: ${itemData.Title}`);
-      } else {
-        const errorResponse = await response.json();
-        console.error(
-          "Error response while creating item in Deleted folder:",
-          errorResponse
-        );
-      }
-    } catch (error) {
-      console.error("Error creating item in Deleted folder:", error);
-    }
-  }
-
-  private async deleteItemFromSharePoint(
-    listName: string,
-    item: any
-  ): Promise<void> {
+  //Xóa Items ở SharePoint list
+  private deleteItemFromSharePoint(listName: string, item: any): void {
     const deleteEndpoint = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items(${item.Id})`;
     const optionsHTTP: ISPHttpClientOptions = {
       headers: {
@@ -416,36 +380,38 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       },
     };
 
-    try {
-      const deleteResponse = await this.context.spHttpClient.post(
-        deleteEndpoint,
-        SPHttpClient.configurations.v1,
-        optionsHTTP
-      );
-
-      if (deleteResponse.ok) {
-        console.log(`Item deleted from SharePoint: ${item.Title}`);
-      } else {
-        const errorResponse = await deleteResponse.json();
-        console.error(
-          "Error response while deleting item from SharePoint:",
-          errorResponse
-        );
-      }
-    } catch (error) {
-      console.error("Error deleting item from SharePoint:", error);
-    }
+    this.context.spHttpClient
+      .post(deleteEndpoint, SPHttpClient.configurations.v1, optionsHTTP)
+      .then((deleteResponse) => {
+        if (deleteResponse.ok) {
+          console.log(`Item deleted from SharePoint: ${item.Device}`);
+          alert(`Item deleted from SharePoint: ${item.Device}`);
+        } else {
+          deleteResponse
+            .json()
+            .then((errorResponse) => {
+              console.error(
+                "Error response while deleting item from SharePoint:",
+                errorResponse
+              );
+            })
+            .catch((jsonError) => {
+              console.error("Error parsing response:", jsonError);
+            });
+        }
+      })
+      .catch((error) => {
+        console.error("Error deleting item from SharePoint:", error);
+      });
   }
 
-  // Click Tạo SharePoint list, tạo cột, tạo mới, update, xóa items
+  //Click Tạo SharePoint list, tạo cột, tạo mới, update, xóa items
   private onClickButtonCreateSharepoint(): void {
     const listNameSharePoint = (
       document.getElementById("titleSharepointList") as HTMLInputElement
     ).value;
-
     if (!listNameSharePoint) {
       alert("Please enter a name for the SharePoint list!");
-
       return;
     }
     //Tạo sharepoint list
@@ -498,15 +464,13 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             nameColumnSharepoint,
             nameItems,
           }));
-      }) // Xóa items không có trong Excel
-      .then(({ nameItems }) => {
-        // Convert nameItems to a Set for faster lookup
+      })
 
+      //Xóa items
+      .then(({ nameItems }) => {
         const existingDevices = new Set(
           nameItems.map((item: any) => item.Device)
         );
-
-        // Fetch existing items in SharePoint list
         return this.context.spHttpClient
           .get(
             `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listNameSharePoint}')/items`,
@@ -524,16 +488,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             const itemsToDelete = existingItems.value.filter(
               (item: any) => !existingDevices.has(item.Device)
             );
-
             return Promise.all(
               itemsToDelete.map((item: any) => {
-                return this.createItemInDeletedFolder(
-                  "Shared Documents/Deleted",
-                  item
-                ) // Update the folder path as necessary
-                  .then(() =>
-                    this.deleteItemFromSharePoint(listNameSharePoint, item)
-                  );
+                return this.deleteItemFromSharePoint(listNameSharePoint, item);
               })
             );
           });
@@ -710,4 +667,23 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   protected get dataVersion(): Version {
     return Version.parse("1.0");
   }
+
+  //Set Permissions
+  //Lấy ID group
+
+  // private getIDGroup() {
+  //   const siteUrl = "https://iscapevn.sharepoint.com/sites/QMS";
+  //   this.context.spHttpClient
+  //     .get(`${siteUrl}/_api/web/sitegroups`, SPHttpClient.configurations.v1)
+  //     .then((response: SPHttpClientResponse) => {
+  //       return response.json();
+  //     })
+  //     .then((data) => {
+  //       const groups: { Title: string; Id: number }[] = data.value;
+  //       groups.forEach((group: { Title: string; Id: number }) => {
+  //         console.log(`Group Name: ${group.Title}, Group ID: ${group.Id}`);
+  //       });
+  //     })
+  //     .catch((error) => console.error("Error fetching groups:", error));
+  // }
 }
