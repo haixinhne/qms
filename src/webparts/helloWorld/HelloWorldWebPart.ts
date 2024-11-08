@@ -84,9 +84,18 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
     const setPermissions = this.domElement.querySelector("#setPermissions");
     if (setPermissions) {
-      setPermissions.addEventListener("click", () =>
-        this.manageRoles(26, 1073741829)
-      );
+      setPermissions.addEventListener("click", () => {
+        const manageRolesValue = [
+          { nameDevice: "Japan", groupId: 26, newRoleId: 1073741826 },
+          { nameDevice: "Vietnam", groupId: 25, newRoleId: 1073741826 },
+          { nameDevice: "USA", groupId: 30, newRoleId: 1073741826 },
+        ];
+
+        // Lặp qua từng đối tượng trong mảng và gọi manageRoles với các giá trị tương ứng
+        manageRolesValue.forEach(({ nameDevice, groupId, newRoleId }) => {
+          this.manageRoles(nameDevice, groupId, newRoleId);
+        });
+      });
     }
 
     this.renderListAsync();
@@ -313,7 +322,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
     //Check sự tồn tại của item dựa vào cột Device
     const checkExistingItem = await this.context.spHttpClient.get(
-      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items?$filter=Device eq '${itemData.Device}'`,
+      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items?$filter=CustomID eq '${itemData.CustomID}'`,
       SPHttpClient.configurations.v1
     );
     //Lưu kết quả các items nếu tồn tại
@@ -358,8 +367,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .then((response: SPHttpClientResponse) => {
         if (response.ok) {
           if (method === "POST") {
-            console.log(`Items created: Device = ${itemData.Device}`);
-            alert("Items created!");
+            console.log(`Items created: CustomID = ${itemData.CustomID}`);
+            alert(`Items created: ${itemData.CustomID}`);
           } else if (method === "MERGE") {
           }
         } else {
@@ -390,8 +399,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .post(deleteEndpoint, SPHttpClient.configurations.v1, optionsHTTP)
       .then((deleteResponse) => {
         if (deleteResponse.ok) {
-          console.log(`Item deleted from SharePoint: ${item.Device}`);
-          alert(`Item deleted from SharePoint: ${item.Device}`);
+          console.log(`Item deleted from SharePoint: ${item.CustomID}`);
+          alert(`Item deleted from SharePoint: ${item.CustomID}`);
         } else {
           deleteResponse
             .json()
@@ -475,7 +484,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       //Xóa items
       .then(({ nameItems }) => {
         const existingDevices = new Set(
-          nameItems.map((item: any) => item.Device)
+          nameItems.map((item: any) => item.CustomID)
         );
         return this.context.spHttpClient
           .get(
@@ -492,7 +501,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           })
           .then((existingItems) => {
             const itemsToDelete = existingItems.value.filter(
-              (item: any) => !existingDevices.has(item.Device)
+              (item: any) => !existingDevices.has(item.CustomID)
             );
             return Promise.all(
               itemsToDelete.map((item: any) => {
@@ -523,7 +532,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .then((data: any) => {
         console.log("Data", data);
         const folderNames = data.value
-          .map((item: any) => item.Device) //Cột lấy tên folder
+          .map((item: any) => item.CustomID) //Cột lấy tên folder
           .filter(Boolean);
 
         return folderNames;
@@ -694,6 +703,28 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .catch((error) => console.error("Error fetching groups:", error));
   }
 
+  //Lấy ID của item dựa trên tên giá trị ở cột Device
+  private getItemId(nameDevice: string): Promise<number[]> {
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/items?$filter=Note eq '${nameDevice}'&$select=ID`;
+    return this.context.spHttpClient
+      .get(requestUrl, SPHttpClient.configurations.v1)
+      .then((response: SPHttpClientResponse) => {
+        if (!response.ok) {
+          return Promise.reject("Failed to retrieve item ID");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.value && data.value.length > 0) {
+          const itemId = data.value.map((item: { ID: number }) => item.ID);
+          console.log("Item ID:", itemId);
+          return itemId;
+        } else {
+          return Promise.reject("Item not found");
+        }
+      });
+  }
+
   //Gửi yêu cầu tới Sharepoint
   private executeRequest(url: string, method: string): Promise<void> {
     return this.context.spHttpClient
@@ -717,33 +748,115 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Ngắt permission hiện tại
-  private breakRoleInheritance(): Promise<void> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/breakroleinheritance(true)`;
+  // Ngắt quyền kế thừa của mục
+  private breakRoleInheritanceForItem(itemId: number): Promise<number> {
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/items(${itemId})/breakroleinheritance(true)`;
+    return this.executeRequest(requestUrl, "POST").then(() => {
+      console.log(`Break role inheritance for item ${itemId} successfully!`);
+      return itemId;
+    });
+  }
+
+  // Xóa vai trò của nhóm hiện tại khỏi mục
+  private removeCurrentRoleFromItem(
+    itemId: number,
+    groupId: number
+  ): Promise<number> {
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/items(${itemId})/roleassignments/removeroleassignment(principalid=${groupId})`;
+    return this.executeRequest(requestUrl, "POST").then(() => {
+      console.log(`Deleted the current group role from item ${itemId}!`);
+      return itemId;
+    });
+  }
+
+  // Xóa tất cả các quyền hiện có của nhóm khỏi mục
+  private removeAllRolesFromItem(itemId: number): Promise<number> {
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/items(${itemId})/roleassignments`;
+    return this.context.spHttpClient
+      .get(requestUrl, SPHttpClient.configurations.v1)
+      .then((response: SPHttpClientResponse) => {
+        if (!response.ok) {
+          return Promise.reject("Failed to retrieve role assignments");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        // Xóa tất cả các vai trò (nếu có)
+        const removePromises = data.value.map((roleAssignment: any) =>
+          this.removeCurrentRoleFromItem(itemId, roleAssignment.PrincipalId)
+        );
+        return Promise.all(removePromises).then(() => itemId);
+      });
+  }
+
+  // Thêm vai trò mới cho nhóm vào mục
+  private addNewRoleToItem(
+    itemId: number,
+    groupId: number,
+    roleId: number
+  ): Promise<void> {
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/items(${itemId})/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
     return this.executeRequest(requestUrl, "POST").then(() =>
-      console.log("Break role inheritance successfully!")
+      console.log(`Updated role for item ${itemId} successfully!`)
     );
   }
-  //Xóa vai trò của nhóm hiện tại
-  private removeCurrentRole(groupId: number): Promise<void> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/roleassignments/removeroleassignment(${groupId})`;
-    return this.executeRequest(requestUrl, "POST").then(() =>
-      console.log("Deleted the current group role!")
-    );
+
+  // Gọi các hàm để thay đổi quyền của mục có tiêu đề 'VietNam'
+  public manageRoles(
+    nameDevice: string,
+    groupId: number,
+    newRoleId: number
+  ): void {
+    this.getItemId(nameDevice)
+      .then((itemIds: any) => {
+        return Promise.all(
+          itemIds.map((itemId: any) =>
+            this.breakRoleInheritanceForItem(itemId)
+              .then(() => this.removeAllRolesFromItem(itemId))
+              .then(() => this.addNewRoleToItem(itemId, groupId, newRoleId))
+          )
+        );
+      })
+      .then(() =>
+        alert(
+          `Updated roles for all items with title '${nameDevice}' successfully!`
+        )
+      )
+      .catch((error) =>
+        console.error(
+          `Error updating roles for items with title '${nameDevice}':`,
+          error
+        )
+      );
   }
-  //Thêm vai trò mới cho nhóm
-  private addNewRole(groupId: number, roleId: number): Promise<void> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
-    return this.executeRequest(requestUrl, "POST").then(() =>
-      console.log("Updated role successfully!")
-    );
-  }
-  //Gọi các hàm
-  public manageRoles(groupId: number, newRoleId: number): void {
-    this.breakRoleInheritance()
-      .then(() => this.removeCurrentRole(groupId))
-      .then(() => this.addNewRole(groupId, newRoleId))
-      .then(() => alert("Updated role successfully!"))
-      .catch((error) => console.error("Error updating role: ", error));
-  }
+
+  // //Ngắt permission hiện tại
+  // private breakRoleInheritance(): Promise<void> {
+  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/breakroleinheritance(true)`;
+  //   return this.executeRequest(requestUrl, "POST").then(() =>
+  //     console.log("Break role inheritance successfully!")
+  //   );
+  // }
+  // //Xóa vai trò của nhóm hiện tại
+  // private removeCurrentRole(groupId: number): Promise<void> {
+  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/roleassignments/removeroleassignment(${groupId})`;
+  //   return this.executeRequest(requestUrl, "POST").then(() =>
+  //     console.log("Deleted the current group role!")
+  //   );
+  // }
+  // //Thêm vai trò mới cho nhóm
+  // private addNewRole(groupId: number, roleId: number): Promise<void> {
+  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
+  //   return this.executeRequest(requestUrl, "POST").then(() =>
+  //     console.log("Updated role successfully!")
+  //   );
+  // }
+  // //Gọi các hàm
+  // public manageRoles(groupId: number, newRoleId: number): void {
+  //   this.breakRoleInheritance()
+  //     .then(() => this.removeCurrentRole(groupId))
+  //     .then(() => this.addNewRole(groupId, newRoleId))
+  //     .then(() => alert("Updated role successfully!"))
+  //     .catch((error) => console.error("Error updating role: ", error));
+  // }
 }
