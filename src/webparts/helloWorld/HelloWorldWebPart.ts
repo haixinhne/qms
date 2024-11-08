@@ -16,6 +16,7 @@ import { __metadata } from "tslib";
 
 //Url file Excel
 const excelUrl = "/sites/QMS/Shared Documents/Book1.xlsx";
+const sharepointUrl = "https://iscapevn.sharepoint.com/sites/QMS";
 
 export interface IHelloWorldWebPartProps {
   description: string;
@@ -76,12 +77,17 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       );
     }
 
-    // const setPermissions = this.domElement.querySelector("#setPermissions");
-    // if (setPermissions) {
-    //   setPermissions.addEventListener("click", () =>
-    //     this.setCustomPermissions()
-    //   );
-    // }
+    const getIdGroup = this.domElement.querySelector("#setPermissions");
+    if (getIdGroup) {
+      getIdGroup.addEventListener("click", () => this.getIDGroup());
+    }
+
+    const setPermissions = this.domElement.querySelector("#setPermissions");
+    if (setPermissions) {
+      setPermissions.addEventListener("click", () =>
+        this.manageRoles(26, 1073741829)
+      );
+    }
 
     this.renderListAsync();
   }
@@ -668,22 +674,76 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     return Version.parse("1.0");
   }
 
-  //Set Permissions
+  //Set Permissions-----------------------------------------------------------------------------------------------------------------------------------------------
   //Lấy ID group
+  private getIDGroup() {
+    this.context.spHttpClient
+      .get(
+        `${sharepointUrl}/_api/web/sitegroups`,
+        SPHttpClient.configurations.v1
+      )
+      .then((response: SPHttpClientResponse) => {
+        return response.json();
+      })
+      .then((data) => {
+        const groups: { Title: string; Id: number }[] = data.value;
+        groups.forEach((group: { Title: string; Id: number }) => {
+          console.log(`Group Name: ${group.Title}, ID: ${group.Id}`);
+        });
+      })
+      .catch((error) => console.error("Error fetching groups:", error));
+  }
 
-  // private getIDGroup() {
-  //   const siteUrl = "https://iscapevn.sharepoint.com/sites/QMS";
-  //   this.context.spHttpClient
-  //     .get(`${siteUrl}/_api/web/sitegroups`, SPHttpClient.configurations.v1)
-  //     .then((response: SPHttpClientResponse) => {
-  //       return response.json();
-  //     })
-  //     .then((data) => {
-  //       const groups: { Title: string; Id: number }[] = data.value;
-  //       groups.forEach((group: { Title: string; Id: number }) => {
-  //         console.log(`Group Name: ${group.Title}, Group ID: ${group.Id}`);
-  //       });
-  //     })
-  //     .catch((error) => console.error("Error fetching groups:", error));
-  // }
+  //Gửi yêu cầu tới Sharepoint
+  private executeRequest(url: string, method: string): Promise<void> {
+    return this.context.spHttpClient
+      .post(url, SPHttpClient.configurations.v1, {
+        headers: {
+          Accept: "application/json;odata=verbose",
+          "X-RequestDigest":
+            this.context.pageContext.legacyPageContext.formDigestValue,
+        },
+      })
+      .then((response: SPHttpClientResponse) => {
+        if (!response.ok) {
+          return response.json().then((errorDetails) => {
+            console.error("Error details:", errorDetails);
+            return Promise.reject(
+              "Request failed: " + errorDetails.error.message.value
+            );
+          });
+        }
+        return Promise.resolve();
+      });
+  }
+
+  //Ngắt permission hiện tại
+  private breakRoleInheritance(): Promise<void> {
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/breakroleinheritance(true)`;
+    return this.executeRequest(requestUrl, "POST").then(() =>
+      console.log("Break role inheritance successfully!")
+    );
+  }
+  //Xóa vai trò của nhóm hiện tại
+  private removeCurrentRole(groupId: number): Promise<void> {
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/roleassignments/removeroleassignment(${groupId})`;
+    return this.executeRequest(requestUrl, "POST").then(() =>
+      console.log("Deleted the current group role!")
+    );
+  }
+  //Thêm vai trò mới cho nhóm
+  private addNewRole(groupId: number, roleId: number): Promise<void> {
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
+    return this.executeRequest(requestUrl, "POST").then(() =>
+      console.log("Updated role successfully!")
+    );
+  }
+  //Gọi các hàm
+  public manageRoles(groupId: number, newRoleId: number): void {
+    this.breakRoleInheritance()
+      .then(() => this.removeCurrentRole(groupId))
+      .then(() => this.addNewRole(groupId, newRoleId))
+      .then(() => alert("Updated role successfully!"))
+      .catch((error) => console.error("Error updating role: ", error));
+  }
 }
