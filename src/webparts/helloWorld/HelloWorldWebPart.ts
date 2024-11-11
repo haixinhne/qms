@@ -86,12 +86,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     if (setPermissions) {
       setPermissions.addEventListener("click", () => {
         const manageRolesValue = [
-          { nameDevice: "Japan", groupId: 26, newRoleId: 1073741826 },
           { nameDevice: "Vietnam", groupId: 25, newRoleId: 1073741826 },
+          { nameDevice: "Japan", groupId: 26, newRoleId: 1073741826 },
           { nameDevice: "USA", groupId: 30, newRoleId: 1073741826 },
         ];
-
-        // Lặp qua từng đối tượng trong mảng và gọi manageRoles với các giá trị tương ứng
         manageRolesValue.forEach(({ nameDevice, groupId, newRoleId }) => {
           this.manageRoles(nameDevice, groupId, newRoleId);
         });
@@ -178,6 +176,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
       return rowObject;
     });
+
     return { nameColumnSharepoint, nameItems };
   }
 
@@ -320,7 +319,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     };
     const listNameUpdate = capsLocksFirstLetter(listName);
 
-    //Check sự tồn tại của item dựa vào cột Device
+    //Check sự tồn tại của item dựa vào cột CustomID
     const checkExistingItem = await this.context.spHttpClient.get(
       `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items?$filter=CustomID eq '${itemData.CustomID}'`,
       SPHttpClient.configurations.v1
@@ -329,7 +328,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const existingItems = await checkExistingItem.json();
     const saveExistingItem = existingItems.value && existingItems.value[0];
 
-    //Nếu item đã tồn tại thì update, nếu ko thì tạo mới
+    //Nếu item đã tồn tại thì phương thức là update, nếu ko thì tạo mới
     let endpoint = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items`;
     let method = "POST"; // default là để tạo mới
 
@@ -370,6 +369,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             console.log(`Items created: CustomID = ${itemData.CustomID}`);
             alert(`Items created: ${itemData.CustomID}`);
           } else if (method === "MERGE") {
+            console.log(`Items updated: CustomID = ${itemData.CustomID}`);
           }
         } else {
           return response.json().then((errorResponse) => {
@@ -422,9 +422,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Click Tạo SharePoint list, tạo cột, tạo mới, update, xóa items
   private onClickButtonCreateSharepoint(): void {
-    const listNameSharePoint = (
-      document.getElementById("titleSharepointList") as HTMLInputElement
-    ).value;
+    const listNameSharePoint =
+      (document.getElementById("titleSharepointList") as HTMLInputElement)
+        .value || "QMS";
     if (!listNameSharePoint) {
       alert("Please enter a name for the SharePoint list!");
       return;
@@ -519,9 +519,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   //Tạo các thư mục con từ sharepoint------------------------------------------------------------------------------------------------------------------------------
   // Hàm lấy data từ SharePoint list (Lấy tên thư mục là 1 cột ở sharepoint list)
   private getFileFromSharePoint(): Promise<string[]> {
-    const listNameSharePoint = (
-      document.getElementById("titleSharepointList") as HTMLInputElement
-    ).value;
+    const listNameSharePoint =
+      (document.getElementById("titleSharepointList") as HTMLInputElement)
+        .value || "QMS";
     const listUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listNameSharePoint}')/items`;
 
     return this.context.spHttpClient
@@ -530,7 +530,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return response.json();
       })
       .then((data: any) => {
-        console.log("Data", data);
         const folderNames = data.value
           .map((item: any) => item.CustomID) //Cột lấy tên folder
           .filter(Boolean);
@@ -705,7 +704,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Lấy ID của item dựa trên tên giá trị ở cột Device
   private getItemId(nameDevice: string): Promise<number[]> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/items?$filter=Note eq '${nameDevice}'&$select=ID`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('QMS')/items?$filter=Note eq '${nameDevice}'&$select=ID`;
     return this.context.spHttpClient
       .get(requestUrl, SPHttpClient.configurations.v1)
       .then((response: SPHttpClientResponse) => {
@@ -750,7 +749,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   // Ngắt quyền kế thừa của mục
   private breakRoleInheritanceForItem(itemId: number): Promise<number> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/items(${itemId})/breakroleinheritance(true)`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('QMS')/items(${itemId})/breakroleinheritance(true)`;
     return this.executeRequest(requestUrl, "POST").then(() => {
       console.log(`Break role inheritance for item ${itemId} successfully!`);
       return itemId;
@@ -762,7 +761,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     itemId: number,
     groupId: number
   ): Promise<number> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/items(${itemId})/roleassignments/removeroleassignment(principalid=${groupId})`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('QMS')/items(${itemId})/roleassignments/removeroleassignment(principalid=${groupId})`;
     return this.executeRequest(requestUrl, "POST").then(() => {
       console.log(`Deleted the current group role from item ${itemId}!`);
       return itemId;
@@ -771,7 +770,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   // Xóa tất cả các quyền hiện có của nhóm khỏi mục
   private removeAllRolesFromItem(itemId: number): Promise<number> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/items(${itemId})/roleassignments`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('QMS')/items(${itemId})/roleassignments`;
     return this.context.spHttpClient
       .get(requestUrl, SPHttpClient.configurations.v1)
       .then((response: SPHttpClientResponse) => {
@@ -795,7 +794,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     groupId: number,
     roleId: number
   ): Promise<void> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/items(${itemId})/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('QMS')/items(${itemId})/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
     return this.executeRequest(requestUrl, "POST").then(() =>
       console.log(`Updated role for item ${itemId} successfully!`)
     );
@@ -832,21 +831,21 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   // //Ngắt permission hiện tại
   // private breakRoleInheritance(): Promise<void> {
-  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/breakroleinheritance(true)`;
+  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle(${listNameSharePoint})/breakroleinheritance(true)`;
   //   return this.executeRequest(requestUrl, "POST").then(() =>
   //     console.log("Break role inheritance successfully!")
   //   );
   // }
   // //Xóa vai trò của nhóm hiện tại
   // private removeCurrentRole(groupId: number): Promise<void> {
-  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/roleassignments/removeroleassignment(${groupId})`;
+  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle(${listNameSharePoint})/roleassignments/removeroleassignment(${groupId})`;
   //   return this.executeRequest(requestUrl, "POST").then(() =>
   //     console.log("Deleted the current group role!")
   //   );
   // }
   // //Thêm vai trò mới cho nhóm
   // private addNewRole(groupId: number, roleId: number): Promise<void> {
-  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('Qms1')/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
+  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle(${listNameSharePoint})/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
   //   return this.executeRequest(requestUrl, "POST").then(() =>
   //     console.log("Updated role successfully!")
   //   );
