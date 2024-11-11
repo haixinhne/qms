@@ -615,6 +615,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         "odata-version": "",
       },
     };
+    const subFolderPath = `Shared Documents/${parentFolderName}/${subFolderName}`;
+
     return this.context.spHttpClient
       .post(
         `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/${parentFolderName}/${subFolderName}')`,
@@ -624,6 +626,40 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .then((response: SPHttpClientResponse) => {
         return response.json();
       })
+      .then(() => {
+        // Create the "00_ESSENTIAL" folder within each subfolder
+        return this.context.spHttpClient.post(
+          `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${subFolderPath}/00_ESSENTIAL')`,
+          SPHttpClient.configurations.v1,
+          optionsHTTP
+        );
+      })
+      .then(() => {
+        console.log(`Created 00_ESSENTIAL in: ${subFolderPath}`);
+      })
+      .then(() => {
+        // Create the "01_WORK" folder within each subfolder
+        return this.context.spHttpClient.post(
+          `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${subFolderPath}/01_WORK')`,
+          SPHttpClient.configurations.v1,
+          optionsHTTP
+        );
+      })
+      .then(() => {
+        console.log(`Created 01_WORK in: ${subFolderPath}`);
+      })
+      .then(() => {
+        // Create the "02_SUBMIT" folder within each subfolder
+        return this.context.spHttpClient.post(
+          `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${subFolderPath}/02_SUBMIT')`,
+          SPHttpClient.configurations.v1,
+          optionsHTTP
+        );
+      })
+      .then(() => {
+        console.log(`Created 02_SUBMIT in: ${subFolderPath}`);
+      })
+
       .catch((error) => {
         console.error("Error creating subfolder:", error);
         throw error;
