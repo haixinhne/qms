@@ -17,6 +17,7 @@ import { __metadata } from "tslib";
 //Url file Excel
 const excelUrl = "/sites/QMS/Shared Documents/Book1.xlsx";
 const sharepointUrl = "https://iscapevn.sharepoint.com/sites/QMS";
+const nameSharepointList = "QMS";
 
 export interface IHelloWorldWebPartProps {
   description: string;
@@ -44,32 +45,33 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
      <div class="${styles.welcome}">    
         <h2>Hello, ${escape(this.context.pageContext.user.displayName)}</h2>
        <div>${this._environmentMessage}</div>
-       <input type="text" class="${
-         styles.qms_input
-       }" id="titleSharepointList", " placeholder="Title sharepoint list" />
+       <button class="${
+         styles.qms_button
+       }" id="createSharepointList">Create Sharepoint</button>
+
         <button class="${
           styles.qms_button
-        }" id="createFolderButton">Create Folder</button>
-        <button class="${
-          styles.qms_button
-        }" id="createSharepointButton">Create Sharepoint</button>
+        }" id="createFolder">Create Folder</button>        
 
          <button class="${
            styles.qms_button
-         }" id="setPermissions">Permissions</button>
+         }" id="setPermissions">Set Permissions</button>
         
         </div>
-     </div>     
+     </div>
+     <div class="${styles.qms_actions}">
+     <p class="${styles.qms_desc}" id: "qms_actions">Text</p>
+     </div>
      </section>`;
 
     //Click button
-    const buttonClick = this.domElement.querySelector("#createFolderButton");
+    const buttonClick = this.domElement.querySelector("#createFolder");
     if (buttonClick) {
       buttonClick.addEventListener("click", () => this.onCreateFolder());
     }
 
     const buttonClickCreateSharepoint = this.domElement.querySelector(
-      "#createSharepointButton"
+      "#createSharepointList"
     );
     if (buttonClickCreateSharepoint) {
       buttonClickCreateSharepoint.addEventListener("click", () =>
@@ -93,6 +95,19 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         manageRolesValue.forEach(({ nameItems, groupId, newRoleId }) => {
           this.manageRoles(nameItems, groupId, newRoleId);
         });
+      });
+    }
+
+    // In ra actions history
+    const clickButton = this.domElement.querySelector("#createSharepointList");
+    const actionsDesc = this.domElement.querySelector("#qms_actions");
+    let countDesc = 0;
+
+    if (clickButton && actionsDesc) {
+      clickButton.addEventListener("click", () => {
+        countDesc++;
+        const newActions = `Bạn đã click vào nút Create Sharepoint lần ${countDesc}`;
+        actionsDesc.insertAdjacentHTML("beforeend", `${newActions}<br>`);
       });
     }
 
@@ -469,19 +484,14 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Click Tạo SharePoint list, tạo cột, tạo mới, update, xóa items
   private onClickButtonCreateSharepoint(): void {
-    const listNameSharePoint =
-      (document.getElementById("titleSharepointList") as HTMLInputElement)
-        .value || "QMS";
-    if (!listNameSharePoint) {
+    if (!nameSharepointList) {
       alert("Please enter a name for the SharePoint list!");
       return;
     }
     //Tạo sharepoint list
-    this.createSharePointList(listNameSharePoint)
+    this.createSharePointList(nameSharepointList)
       .then(() => {
-        (
-          document.getElementById("titleSharepointList") as HTMLInputElement
-        ).value = "";
+        nameSharepointList;
       })
       //Tạo cột từ file excel
       .then(() => this.getFileExcelFromSharePoint(excelUrl))
@@ -492,7 +502,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           .reduce((promise, createColumn) => {
             return promise.then(() => {
               return this.createColumnInSharePoint(
-                listNameSharePoint,
+                nameSharepointList,
                 createColumn
               ).catch((error) => {
                 console.error(`Error adding column "${createColumn}":`, error);
@@ -519,7 +529,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               {} as Record<string, any>
             );
             return promise.then(() =>
-              this.createItemsInSharePointList(listNameSharePoint, itemObject)
+              this.createItemsInSharePointList(nameSharepointList, itemObject)
             );
           }, Promise.resolve())
           .then(() => ({
@@ -535,7 +545,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         );
         return this.context.spHttpClient
           .get(
-            `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listNameSharePoint}')/items`,
+            `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items`,
             SPHttpClient.configurations.v1
           )
           .then((response) => {
@@ -552,7 +562,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             );
             return Promise.all(
               itemsDelete.map((item: any) => {
-                return this.deleteItemFromSharePoint(listNameSharePoint, item);
+                return this.deleteItemFromSharePoint(nameSharepointList, item);
               })
             );
           });
@@ -568,10 +578,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   private getFileFromSharePoint(): Promise<
     { folderName: string; subFolderName: string }[]
   > {
-    const listNameSharePoint =
-      (document.getElementById("titleSharepointList") as HTMLInputElement)
-        .value || "QMS";
-    const listUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listNameSharePoint}')/items`;
+    const listUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items`;
 
     return this.context.spHttpClient
       .get(listUrl, SPHttpClient.configurations.v1)
@@ -882,37 +889,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         )
       );
   }
-
-  // //set permissions cho sharepoint list
-  //   //Ngắt permission hiện tại
-  //   private breakRoleInheritance(): Promise<void> {
-  //     const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle(${listNameSharePoint})/breakroleinheritance(true)`;
-  //     return this.executeRequest(requestUrl, "POST").then(() =>
-  //       console.log("Break role inheritance successfully!")
-  //     );
-  //   }
-  //   //Xóa vai trò của nhóm hiện tại
-  //   private removeCurrentRole(groupId: number): Promise<void> {
-  //     const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle(${listNameSharePoint})/roleassignments/removeroleassignment(${groupId})`;
-  //     return this.executeRequest(requestUrl, "POST").then(() =>
-  //       console.log("Deleted the current group role!")
-  //     );
-  //   }
-  //   //Thêm vai trò mới cho nhóm
-  //   private addNewRole(groupId: number, roleId: number): Promise<void> {
-  //     const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle(${listNameSharePoint})/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
-  //     return this.executeRequest(requestUrl, "POST").then(() =>
-  //       console.log("Updated role successfully!")
-  //     );
-  //   }
-  //   //Gọi các hàm
-  //   public manageRoles(groupId: number, newRoleId: number): void {
-  //     this.breakRoleInheritance()
-  //       .then(() => this.removeCurrentRole(groupId))
-  //       .then(() => this.addNewRole(groupId, newRoleId))
-  //       .then(() => alert("Updated role successfully!"))
-  //       .catch((error) => console.error("Error updating role: ", error));
-  //   }
 
   //Đoạn code mặc định----------------------------------------------------------------------------------------------------------------------------------------------
   private getEnvironmentMessage(): Promise<string> {
