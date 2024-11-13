@@ -59,24 +59,25 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         
         </div>
      </div>
-     <div class="${styles.qms_actions}">
-     <p class="${styles.qms_desc}" id: "qms_actions">Text</p>
+     <div class="${styles.qms_actions}" id= "qms_actions">
+     <p class="${styles.qms_desc}" id= "qms_desc"></p>
      </div>
      </section>`;
 
     //Click button
-    const buttonClick = this.domElement.querySelector("#createFolder");
-    if (buttonClick) {
-      buttonClick.addEventListener("click", () => this.onCreateFolder());
-    }
-
-    const buttonClickCreateSharepoint = this.domElement.querySelector(
+    const clickCreateSharepoint = this.domElement.querySelector(
       "#createSharepointList"
     );
-    if (buttonClickCreateSharepoint) {
-      buttonClickCreateSharepoint.addEventListener("click", () =>
+
+    if (clickCreateSharepoint) {
+      clickCreateSharepoint.addEventListener("click", () =>
         this.onClickButtonCreateSharepoint()
       );
+    }
+
+    const clickCreateFolder = this.domElement.querySelector("#createFolder");
+    if (clickCreateFolder) {
+      clickCreateFolder.addEventListener("click", () => this.onCreateFolder());
     }
 
     const getIdGroup = this.domElement.querySelector("#setPermissions");
@@ -99,15 +100,34 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     }
 
     // In ra actions history
-    const clickButton = this.domElement.querySelector("#createSharepointList");
-    const actionsDesc = this.domElement.querySelector("#qms_actions");
+    const actionsContainer = this.domElement.querySelector("#qms_actions");
     let countDesc = 0;
 
-    if (clickButton && actionsDesc) {
-      clickButton.addEventListener("click", () => {
-        countDesc++;
-        const newActions = `Bạn đã click vào nút Create Sharepoint lần ${countDesc}`;
-        actionsDesc.insertAdjacentHTML("beforeend", `${newActions}<br>`);
+    const handleClick = (buttonName: string) => {
+      countDesc++;
+      this.getUserName().then((userName) => {
+        const newParagraph = document.createElement("p");
+        newParagraph.className = "qms_desc";
+        newParagraph.innerHTML = `${userName} clicked the ${buttonName} button for the ${countDesc}nd time`;
+        actionsContainer.appendChild(newParagraph);
+      });
+    };
+
+    if (clickCreateSharepoint && actionsContainer) {
+      clickCreateSharepoint.addEventListener("click", () => {
+        handleClick("Create Sharepoint");
+      });
+    }
+
+    if (clickCreateFolder && actionsContainer) {
+      clickCreateFolder.addEventListener("click", () => {
+        handleClick("Create Folder");
+      });
+    }
+
+    if (setPermissions && actionsContainer) {
+      setPermissions.addEventListener("click", () => {
+        handleClick("Set Permissions");
       });
     }
 
@@ -115,9 +135,16 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   }
 
   protected onInit(): Promise<void> {
-    return this.getEnvironmentMessage().then((message) => {
-      this._environmentMessage = message;
-    });
+    return this.getEnvironmentMessage()
+      .then((message) => {
+        this._environmentMessage = message;
+        return this.getUserName().then((userName) => {
+          console.log(`User Name: ${userName}`);
+        });
+      })
+      .catch((error) => {
+        console.error("User Name", error);
+      });
   }
 
   private _renderList(items: ISPList[]): void {
@@ -154,6 +181,23 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return response.json();
       })
       .catch(() => {});
+  }
+
+  //Lấy tên user name
+  private getUserName(): Promise<any> {
+    return this.context.spHttpClient
+      .get(
+        `${sharepointUrl}/_api/web/currentuser`,
+        SPHttpClient.configurations.v1
+      )
+      .then((response: SPHttpClientResponse) => {
+        return response.json();
+      })
+      .then((data) => {
+        const userName = data.Title;
+        return userName;
+      })
+      .catch((error) => console.error(error));
   }
 
   //Tạo sharepoint list từ excel----------------------------------------------------------------------------------------------------------------------------------
