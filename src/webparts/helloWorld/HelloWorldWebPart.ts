@@ -60,7 +60,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         </div>
      </div>
      <div class="${styles.qms_actions}" id= "qms_actions">
-     <p class="${styles.qms_desc}" id= "qms_desc"></p>
+     <p id= "qms_desc"></p>
      </div>
      </section>`;
 
@@ -68,40 +68,17 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const clickCreateSharepoint = this.domElement.querySelector(
       "#createSharepointList"
     );
-
-    if (clickCreateSharepoint) {
-      clickCreateSharepoint.addEventListener("click", () =>
-        this.onClickButtonCreateSharepoint()
-      );
-    }
-
     const clickCreateFolder = this.domElement.querySelector("#createFolder");
-    if (clickCreateFolder) {
-      clickCreateFolder.addEventListener("click", () => this.onCreateFolder());
-    }
-
-    const getIdGroup = this.domElement.querySelector("#setPermissions");
-    if (getIdGroup) {
-      getIdGroup.addEventListener("click", () => this.getIDGroup());
-    }
-
     const setPermissions = this.domElement.querySelector("#setPermissions");
-    if (setPermissions) {
-      setPermissions.addEventListener("click", () => {
-        const manageRolesValue = [
-          { nameItems: "Vietnam", groupId: 25, newRoleId: 1073741826 },
-          { nameItems: "Japan", groupId: 26, newRoleId: 1073741826 },
-          { nameItems: "USA", groupId: 30, newRoleId: 1073741826 },
-        ];
-        manageRolesValue.forEach(({ nameItems, groupId, newRoleId }) => {
-          this.manageRoles(nameItems, groupId, newRoleId);
-        });
-      });
-    }
+    const actionsContainer = this.domElement.querySelector("#qms_actions");
+
+    let countDesc = 0;
 
     // In ra actions history
-    const actionsContainer = this.domElement.querySelector("#qms_actions");
-    let countDesc = 0;
+    if (!actionsContainer) {
+      console.error("The actionsContainer element was not found.");
+      return;
+    }
 
     const handleClick = (buttonName: string) => {
       countDesc++;
@@ -113,20 +90,38 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
     };
 
-    if (clickCreateSharepoint && actionsContainer) {
+    //Event click button
+    if (clickCreateSharepoint) {
       clickCreateSharepoint.addEventListener("click", () => {
+        this.onClickButtonCreateSharepoint();
         handleClick("Create Sharepoint");
       });
+    } else {
+      console.warn("clickCreateSharepoint element not found.");
     }
 
-    if (clickCreateFolder && actionsContainer) {
+    if (clickCreateFolder) {
       clickCreateFolder.addEventListener("click", () => {
+        this.onCreateFolder();
         handleClick("Create Folder");
       });
+    } else {
+      console.warn("clickCreateFolder element not found.");
     }
 
-    if (setPermissions && actionsContainer) {
+    if (setPermissions) {
       setPermissions.addEventListener("click", () => {
+        this.getIDGroup();
+
+        const manageRolesValue = [
+          { nameItems: "Vietnam", groupId: 25, newRoleId: 1073741826 },
+          { nameItems: "Japan", groupId: 26, newRoleId: 1073741826 },
+          { nameItems: "USA", groupId: 30, newRoleId: 1073741826 },
+        ];
+        manageRolesValue.forEach(({ nameItems, groupId, newRoleId }) => {
+          this.manageRoles(nameItems, groupId, newRoleId);
+        });
+
         handleClick("Set Permissions");
       });
     }
@@ -135,16 +130,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   }
 
   protected onInit(): Promise<void> {
-    return this.getEnvironmentMessage()
-      .then((message) => {
-        this._environmentMessage = message;
-        return this.getUserName().then((userName) => {
-          console.log(`User Name: ${userName}`);
-        });
-      })
-      .catch((error) => {
-        console.error("User Name", error);
-      });
+    return this.getEnvironmentMessage().then((message) => {
+      this._environmentMessage = message;
+      return this.getUserName();
+    });
   }
 
   private _renderList(items: ISPList[]): void {
