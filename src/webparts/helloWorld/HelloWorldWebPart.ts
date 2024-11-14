@@ -45,9 +45,15 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
      <div class="${styles.welcome}">    
         <h2>Hello, ${escape(this.context.pageContext.user.displayName)}</h2>
        <div>${this._environmentMessage}</div>
-       <button class="${
-         styles.qms_button
-       }" id="createSharepointList">Create Sharepoint</button>
+       
+        
+        </div>
+     </div>
+
+     <div class=${styles.qms_btn}>
+     <button class="${
+       styles.qms_button
+     }" id="createSharepointList">Create Sharepoint</button>
 
         <button class="${
           styles.qms_button
@@ -55,10 +61,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
          <button class="${
            styles.qms_button
-         }" id="setPermissions">Set Permissions</button>
-        
-        </div>
-     </div>
+         }" id="setPermissions">Set Permissions</button></div>
      <div class="${styles.qms_actions}" id= "qms_actions">
      <p id= "qms_desc"></p>
      </div>
@@ -72,20 +75,19 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const setPermissions = this.domElement.querySelector("#setPermissions");
     const actionsContainer = this.domElement.querySelector("#qms_actions");
 
-    let countDesc = 0;
+    //let countDesc = 0;
 
-    // In ra actions history
     if (!actionsContainer) {
       console.error("The actionsContainer element was not found.");
       return;
     }
 
     const handleClick = (buttonName: string) => {
-      countDesc++;
+      //countDesc++;
       this.getUserName().then((userName) => {
         const newParagraph = document.createElement("p");
         newParagraph.className = "qms_desc";
-        newParagraph.innerHTML = `${userName} clicked the ${buttonName} button for the ${countDesc}nd time`;
+        newParagraph.innerHTML = `${userName} clicked the ${buttonName} button at ${new Date().toLocaleString()}`;
         actionsContainer.appendChild(newParagraph);
       });
     };

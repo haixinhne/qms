@@ -1,10 +1,31 @@
 @import "~@microsoft/sp-office-ui-fabric-core/dist/sass/SPFabricCore.scss";
 
 //Hải add
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+.qms_btn {
+  display: flex;
+  justify-content: center;
+  margin: 20px auto;
+  gap: 10px;
+}
+
+.qms_button {
+  padding: 2px;
+  color: #323130;
+  cursor: pointer;
+}
+
+.qms_actions {
+  padding-left: 170px;
+
+  height: 110px;
+  color: gray;
 }
 
 .list {
@@ -49,18 +70,6 @@
 
 .welcome {
   text-align: center;
-}
-
-.qms_button {
-  margin-top: 30px;
-  cursor: pointer;
-}
-
-.qms_actions {
-  padding-left: 170px;
-  margin-top: 30px;
-  height: 110px;
-  color: gray;
 }
 
 .welcomeImage {
