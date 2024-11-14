@@ -75,21 +75,56 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const setPermissions = this.domElement.querySelector("#setPermissions");
     const actionsContainer = this.domElement.querySelector("#qms_actions");
 
-    //let countDesc = 0;
-
     if (!actionsContainer) {
       console.error("The actionsContainer element was not found.");
       return;
     }
 
     const handleClick = (buttonName: string) => {
-      //countDesc++;
       this.getUserName().then((userName) => {
+        const getTimestamp = new Date().toLocaleString();
+        const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
         const newParagraph = document.createElement("p");
+
         newParagraph.className = "qms_desc";
-        newParagraph.innerHTML = `${userName} clicked the ${buttonName} button at ${new Date().toLocaleString()}`;
+        newParagraph.innerHTML = getMessage;
         actionsContainer.appendChild(newParagraph);
+
+        const logData = getMessage;
+
+        const jsonData = JSON.stringify(logData);
+        const fileName = `${new Date().getTime()}_log.json`;
+        const folderPath = "/sites/QMS/Shared Documents/Activity_History";
+        saveJsonToSharePoint(folderPath, fileName, jsonData);
       });
+    };
+
+    //Save file
+    const saveJsonToSharePoint = (
+      folderPath: string,
+      fileName: string,
+      jsonData: string
+    ) => {
+      const url = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${folderPath}')/Files/add(url='${fileName}',overwrite=true)`;
+
+      this.context.spHttpClient
+        .post(url, SPHttpClient.configurations.v1, {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "odata-version": "",
+          },
+          body: jsonData,
+        })
+        .then((response: SPHttpClientResponse) => {
+          if (response.ok) {
+            console.log("File saved successfully");
+          } else {
+            response.json().then((error) => {
+              console.error("Error saving file:", error);
+            });
+          }
+        });
     };
 
     //Event click button
