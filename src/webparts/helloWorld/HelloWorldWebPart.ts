@@ -67,7 +67,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
      </div>
      </section>`;
 
-    //Hàm click button
     const clickCreateSharepoint = this.domElement.querySelector(
       "#createSharepointList"
     );
@@ -80,6 +79,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       return;
     }
 
+    //Hàm click button
     const handleClick = (buttonName: string) => {
       this.getUserName().then((userName) => {
         const getTimestamp = new Date().toLocaleString();
@@ -94,7 +94,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
         const jsonData = JSON.stringify(logData);
         const fileName = `${new Date().getTime()}_log.json`;
-        const folderPath = "/sites/QMS/Shared Documents/Activity_History";
+        const folderPath = `/sites/${nameSharepointList}/Shared Documents/Activity_History`;
         saveJsonToSharePoint(folderPath, fileName, jsonData);
       });
     };
@@ -429,7 +429,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       __metadata: {
         type: `SP.Data.${listNameUpdate}ListItem`,
       },
-      Title: itemData.Title || "QMS",
+      Title: itemData.Title || nameSharepointList,
     };
 
     // for (const key in itemData) {
@@ -837,7 +837,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Lấy ID của item dựa trên tên giá trị ở cột Note
   private getItemId(nameItems: string): Promise<number[]> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('QMS')/items?$filter=Note eq '${nameItems}'&$select=ID`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=Note eq '${nameItems}'&$select=ID`;
     return this.context.spHttpClient
       .get(requestUrl, SPHttpClient.configurations.v1)
       .then((response: SPHttpClientResponse) => {
@@ -881,7 +881,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   // Ngắt quyền kế thừa của mục
   private breakRoleInheritanceForItem(itemId: number): Promise<number> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('QMS')/items(${itemId})/breakroleinheritance(true)`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/breakroleinheritance(true)`;
     return this.executeRequest(requestUrl, "POST").then(() => {
       console.log(
         `Break role inheritance for item ID: ${itemId} successfully!`
@@ -895,7 +895,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     itemId: number,
     groupId: number
   ): Promise<number> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('QMS')/items(${itemId})/roleassignments/removeroleassignment(principalid=${groupId})`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/roleassignments/removeroleassignment(principalid=${groupId})`;
     return this.executeRequest(requestUrl, "POST").then(() => {
       console.log(`Deleted the current group role from item ID: ${itemId}!`);
       return itemId;
@@ -904,7 +904,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   // Xóa tất cả các quyền hiện có của nhóm khỏi mục
   private removeAllRolesFromItem(itemId: number): Promise<number> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('QMS')/items(${itemId})/roleassignments`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/roleassignments`;
     return this.context.spHttpClient
       .get(requestUrl, SPHttpClient.configurations.v1)
       .then((response: SPHttpClientResponse) => {
@@ -928,7 +928,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     groupId: number,
     roleId: number
   ): Promise<void> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('QMS')/items(${itemId})/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
     return this.executeRequest(requestUrl, "POST").then(() =>
       console.log(`Updated role for item ID: ${itemId} successfully!`)
     );
