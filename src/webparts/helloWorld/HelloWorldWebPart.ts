@@ -35,7 +35,7 @@ export interface ISPList {
 
 export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorldWebPartProps> {
   private _environmentMessage: string = "";
-
+  //DOM-------------------------------------------------------------------------------------------------------------------------------------------------------------
   public render(): void {
     this.domElement.innerHTML = `
     <section class="${styles.helloWorld} ${
@@ -67,7 +67,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
      </div>
      </section>`;
 
-    //Click button
+    //Hàm click button
     const clickCreateSharepoint = this.domElement.querySelector(
       "#createSharepointList"
     );
@@ -99,7 +99,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
     };
 
-    //Save file
+    //Hàm Save file json vào thư mục mỗi khi click vào 1 nút (handleClick)
     const saveJsonToSharePoint = (
       folderPath: string,
       fileName: string,
@@ -128,6 +128,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     };
 
     //Event click button
+    //Tạo sharepoint
     if (clickCreateSharepoint) {
       clickCreateSharepoint.addEventListener("click", () => {
         this.onClickButtonCreateSharepoint();
@@ -137,6 +138,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       console.warn("clickCreateSharepoint element not found.");
     }
 
+    //Tạo folder
     if (clickCreateFolder) {
       clickCreateFolder.addEventListener("click", () => {
         this.onCreateFolder();
@@ -146,6 +148,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       console.warn("clickCreateFolder element not found.");
     }
 
+    //Set Permissions
     if (setPermissions) {
       setPermissions.addEventListener("click", () => {
         this.getIDGroup();
@@ -166,6 +169,23 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     this.renderListAsync();
   }
 
+  //Lấy tên user name
+  private getUserName(): Promise<any> {
+    return this.context.spHttpClient
+      .get(
+        `${sharepointUrl}/_api/web/currentuser`,
+        SPHttpClient.configurations.v1
+      )
+      .then((response: SPHttpClientResponse) => {
+        return response.json();
+      })
+      .then((data) => {
+        const userName = data.Title;
+        return userName;
+      });
+  }
+
+  //Hàm defaults--------------------------------------------------------------------------------------------------------------------------------------------------
   protected onInit(): Promise<void> {
     return this.getEnvironmentMessage().then((message) => {
       this._environmentMessage = message;
@@ -207,23 +227,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return response.json();
       })
       .catch(() => {});
-  }
-
-  //Lấy tên user name
-  private getUserName(): Promise<any> {
-    return this.context.spHttpClient
-      .get(
-        `${sharepointUrl}/_api/web/currentuser`,
-        SPHttpClient.configurations.v1
-      )
-      .then((response: SPHttpClientResponse) => {
-        return response.json();
-      })
-      .then((data) => {
-        const userName = data.Title;
-        return userName;
-      })
-      .catch((error) => console.error(error));
   }
 
   //Tạo sharepoint list từ excel----------------------------------------------------------------------------------------------------------------------------------
@@ -671,7 +674,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               ) === index
           );
 
-        console.log(folderValues);
+        console.log(`Folder name: ${folderValues}`);
         return folderValues;
       })
       .catch((error) => {
