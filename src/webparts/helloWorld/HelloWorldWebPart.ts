@@ -79,34 +79,14 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       return;
     }
 
-    //Hàm tạo thẻ <p> và lưu vào thư mục
-    const handleClick = (buttonName: string) => {
-      this.getUserName().then((userName) => {
-        const getTimestamp = new Date().toLocaleString();
-        const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
-        const newParagraph = document.createElement("p");
-
-        newParagraph.className = "qms_desc";
-        newParagraph.innerHTML = getMessage;
-        //actionsContainer.appendChild(newParagraph);
-
-        const logData = { Message: "Hải xinh đây" };
-
-        const jsonData = JSON.stringify(logData);
-        const fileName = `${new Date().getTime()}log.json`;
-        const folderPath = `/sites/${nameSharepointList}/Shared Documents/Activity_History`;
-        saveJsonToSharePoint(folderPath, fileName, jsonData);
-      });
-    };
-
-    //Hàm Save file json vào thư mục mỗi khi click vào 1 nút (handleClick)
-    const saveJsonToSharePoint = (
+    //Display----------------------------------------------------------------------------------------------------------------------------------------------------
+    //Hàm Save file json vào thư mục mỗi khi click vào 1 nút
+    const saveJsonSharePoint = (
       folderPath: string,
       fileName: string,
       jsonData: string
     ) => {
       const url = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${folderPath}')/Files/add(url='${fileName}',overwrite=true)`;
-
       this.context.spHttpClient
         .post(url, SPHttpClient.configurations.v1, {
           headers: {
@@ -126,67 +106,15 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           }
         });
     };
-    ////////////////////////////////////
 
-    const displayJsonFiles = (
-      files: { ServerRelativeUrl: string; Name: string }[]
-    ) => {
-      actionsContainer.innerHTML = "";
+    //Hiển thị nội dung từ file Json
+    const displayJsonContent = () => {
+      const folderPath = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
+      const fileName = "activityLog.json";
+      const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderPath}/${fileName}')/$value`;
 
-      files.forEach((file) => {
-        const fileUrl = file.ServerRelativeUrl;
-
-        // Tạo thẻ <p>
-        const fileItem = document.createElement("p");
-        fileItem.textContent = file.Name;
-        actionsContainer.appendChild(fileItem);
-
-        // Gọi API để lấy nội dung của tệp JSON bằng spHttpClient
-        this.context.spHttpClient
-          .get(
-            `${this.context.pageContext.web.absoluteUrl}${fileUrl}`,
-            SPHttpClient.configurations.v1,
-            {
-              headers: {
-                Accept: "application/json;odata=verbose",
-                "Content-Type": "application/json;odata=verbose",
-                "odata-version": "",
-              },
-            }
-          )
-          .then((response) => response.text()) // Lấy phản hồi dưới dạng văn bản
-          .then((text) => {
-            console.log("Response Text:", text); // Kiểm tra phản hồi trả về
-
-            try {
-              const content = JSON.parse(text); // Chuyển đổi chuỗi thành JSON
-              console.log("Content", content);
-              if (content) {
-                const jsonContentDiv = document.createElement("div");
-                jsonContentDiv.className = "activity_content";
-                jsonContentDiv.textContent = JSON.stringify(content, null, 2);
-                actionsContainer.appendChild(jsonContentDiv);
-              } else {
-                console.error("Dữ liệu JSON không hợp lệ:", content);
-              }
-            } catch (error) {
-              console.error("Lỗi khi phân tích cú pháp JSON:", error);
-            }
-          })
-          .catch((error) => {
-            console.error(
-              "Lỗi khi tải hoặc phân tích cú pháp nội dung tệp JSON:",
-              error
-            );
-          });
-      });
-    };
-
-    const getJsonFilesInFolder = () => {
-      const url = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('Shared Documents/ActivityHistory')/Files?$filter=substringof('.json', Name)`;
-
-      return this.context.spHttpClient
-        .get(url, SPHttpClient.configurations.v1, {
+      this.context.spHttpClient
+        .get(fileUrl, SPHttpClient.configurations.v1, {
           headers: {
             Accept: "application/json;odata=verbose",
             "Content-Type": "application/json;odata=verbose",
@@ -195,27 +123,85 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         })
         .then((response) => {
           if (response.ok) {
-            return response.text(); // Lấy phản hồi dưới dạng văn bản
+            return response.text();
           } else {
-            console.error("Lỗi từ API:", response.status, response.statusText);
-            throw new Error("Lỗi từ API.");
+            return Promise.reject(
+              `Error retrieving file. Status: ${response.status}, ${response.statusText}`
+            );
           }
         })
-        .then((text) => {
-          try {
-            const data = JSON.parse(text); // Phân tích cú pháp chuỗi thành JSON
-            const files = data.d.results; // Lấy danh sách tệp JSON
-            displayJsonFiles(files);
-          } catch (error) {
-            console.error("Lỗi khi phân tích cú pháp JSON:", error);
+        .then((jsonContent) => JSON.parse(jsonContent))
+        .then((parsedContent) => {
+          if (!Array.isArray(parsedContent)) {
+            return Promise.reject("JSON content is not an array.");
+          }
+
+          const contentContainer = document.getElementById("qms_actions");
+          if (contentContainer) {
+            contentContainer.innerHTML = "";
+            parsedContent.reverse().forEach((item) => {
+              const paragraph = document.createElement("p");
+              paragraph.className = "qms_desc";
+              paragraph.textContent = item;
+              contentContainer.appendChild(paragraph);
+            });
+          } else {
+            return Promise.reject("Container element not found!");
           }
         })
         .catch((error) => {
-          console.error("Lỗi khi tải danh sách tệp JSON:", error);
+          console.error("Error processing JSON file:", error);
         });
     };
 
-    ////////////////////////////////////////////////////////////////////////////
+    //Hàm tạo nội dung khi click
+    const handleClick = (buttonName: string) => {
+      this.getUserName().then((userName) => {
+        const getTimestamp = new Date().toLocaleString();
+        const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
+        const folderPath = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
+        const fileName = "activityLog.json";
+        const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderPath}/${fileName}')/$value`;
+
+        this.context.spHttpClient
+          .get(fileUrl, SPHttpClient.configurations.v1, {
+            headers: {
+              Accept: "application/json;odata=verbose",
+              "Content-Type": "application/json;odata=verbose",
+              "odata-version": "",
+            },
+          })
+          .then((response) => {
+            if (response.ok) {
+              return response.text();
+            } else if (response.status === 404) {
+              console.error("File not found. Creating a new one.");
+              return "[]";
+            } else {
+              return Promise.reject(
+                `Error retrieving file. Status: ${response.status}, ${response.statusText}`
+              );
+            }
+          })
+          .then((existingContent) => {
+            return Promise.resolve()
+              .then(() => JSON.parse(existingContent))
+              .catch((error) => {
+                console.error("Error parsing existing JSON content:", error);
+                return [];
+              })
+              .then((currentData) => {
+                currentData.push(getMessage);
+                const updatedJson = JSON.stringify(currentData, null, 1);
+                saveJsonSharePoint(folderPath, fileName, updatedJson);
+                displayJsonContent();
+              });
+          })
+          .catch((error) => {
+            console.error("Error processing JSON file:", error);
+          });
+      });
+    };
 
     //Event click button
     //Tạo sharepoint
@@ -223,7 +209,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       clickCreateSharepoint.addEventListener("click", () => {
         this.onClickButtonCreateSharepoint();
         handleClick("Create Sharepoint");
-        getJsonFilesInFolder();
+        displayJsonContent();
       });
     } else {
       console.warn("clickCreateSharepoint element not found.");

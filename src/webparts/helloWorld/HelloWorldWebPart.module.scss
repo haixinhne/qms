@@ -23,9 +23,13 @@
 
 .qms_actions {
   padding-left: 170px;
-
-  height: 110px;
+  height: 100px;
   color: gray;
+  overflow: auto;
+}
+
+.qms_actions::-webkit-scrollbar {
+  display: none;
 }
 
 .list {
