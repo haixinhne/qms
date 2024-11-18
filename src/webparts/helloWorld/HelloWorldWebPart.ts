@@ -98,7 +98,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         })
         .then((response: SPHttpClientResponse) => {
           if (response.ok) {
-            console.log("File saved successfully");
           } else {
             response.json().then((error) => {
               console.error("Error saving file:", error);
@@ -509,17 +508,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       Title: itemData.Title || nameSharepointList,
     };
 
-    // for (const key in itemData) {
-    //   if (itemData.hasOwnProperty(key)) {
-    //     bodyObject[key] = String(itemData[key] || "");
-    //   }
-    // }
-
     let hasChanges = false;
     let createdFields: string[] = [];
     let updatedFields: string[] = [];
-
-    // Loop over itemData to determine changes
+    //Lặp qua các itemData để xem các thay đổi (True-False)
     for (const key in itemData) {
       if (itemData.hasOwnProperty(key)) {
         const newValue = String(itemData[key] || "");
@@ -527,15 +519,14 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           ? String(saveExistingItem[key] || "")
           : "";
 
-        // If the value has changed, update or create the field
         if (newValue !== existingValue) {
           bodyObject[key] = newValue;
           hasChanges = true;
 
           if (saveExistingItem) {
-            updatedFields.push(key); // Track updated fields
+            updatedFields.push(key); //Update
           } else {
-            createdFields.push(key); // Track newly created fields
+            createdFields.push(key); //Create
           }
         }
       }
@@ -723,7 +714,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Tạo các thư mục con từ sharepoint------------------------------------------------------------------------------------------------------------------------------
+  //Tạo các thư mục từ sharepoint------------------------------------------------------------------------------------------------------------------------------
   // Hàm lấy data từ SharePoint list (Lấy tên thư mục là 1 cột ở sharepoint list)
   private getFileFromSharePoint(): Promise<
     { folderName: string; subFolderName: string }[]
@@ -737,10 +728,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .then((data: any) => {
         const folderValues = data.value
-          .filter((item: any) => item.Note && item.Brand)
+          .filter((item: any) => item.Branch && item.ProjectName)
           .map((item: any) => ({
-            folderName: item.Note,
-            subFolderName: item.Brand,
+            folderName: item.Branch,
+            subFolderName: item.ProjectName,
           }))
           .filter(
             (name: any, index: Number, self: any) =>
@@ -751,7 +742,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               ) === index
           );
 
-        console.log(`Folder name: ${folderValues}`);
         return folderValues;
       })
       .catch((error) => {
@@ -772,11 +762,32 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         "odata-version": "",
       },
     };
-    const subFolderPath = `Shared Documents/${parentFolderName}/${subFolderName}`;
+    const subFolderUrl = `Shared Documents/PROJECT/${parentFolderName}/${subFolderName}`;
+    const subFolders = ["Promotion", "Design", "Build"];
+    const childSubFolders: { [key: string]: string[] } = {
+      Promotion: [
+        "Basic project data",
+        "Promotion activities",
+        "Reports",
+        "Project risk analysis",
+      ],
+      Design: [
+        "Drawings",
+        "Funtion Checklist AS",
+        "Funtion Checklist ME",
+        "Designer Approval Request",
+        "Design Review 23 AS/ME",
+      ],
+      Build: [
+        "Project outline",
+        "PM Policy",
+        "HSE risks (Health, Safely & Env.ment)",
+      ],
+    };
 
     return this.context.spHttpClient
       .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/${parentFolderName}/${subFolderName}')`,
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/PROJECT/${parentFolderName}/${subFolderName}')`,
         SPHttpClient.configurations.v1,
         optionsHTTP
       )
@@ -784,42 +795,39 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return response.json();
       })
       .then(() => {
-        // Create the "00_ESSENTIAL" folder within each subfolder
-        return this.context.spHttpClient.post(
-          `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${subFolderPath}/00_ESSENTIAL')`,
-          SPHttpClient.configurations.v1,
-          optionsHTTP
-        );
+        // Tạo các thư mục con theo danh sách
+        return subFolders.reduce((prevPromise, folder) => {
+          return prevPromise.then(() => {
+            const folderPath = `${subFolderUrl}/${folder}`;
+            return this.context.spHttpClient
+              .post(
+                `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${folderPath}')`,
+                SPHttpClient.configurations.v1,
+                optionsHTTP
+              )
+              .then(() => {
+                // Tạo các thư mục con nhỏ hơn trong từng thư mục con
+                const childFolders = childSubFolders[folder];
+                return childFolders.reduce((childPrevPromise, childFolder) => {
+                  const childFolderPath = `${folderPath}/${childFolder}`;
+                  return childPrevPromise.then(() => {
+                    return this.context.spHttpClient.post(
+                      `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${childFolderPath}')`,
+                      SPHttpClient.configurations.v1,
+                      optionsHTTP
+                    );
+                  });
+                }, Promise.resolve());
+              });
+          });
+        }, Promise.resolve());
       })
       .then(() => {
-        console.log(`Created 00_ESSENTIAL in: ${subFolderPath}`);
+        console.log(`Created subfolders in: ${subFolderUrl}`);
+        alert(`Created subfolders in: ${subFolderUrl}`);
       })
-      .then(() => {
-        // Create the "01_WORK" folder within each subfolder
-        return this.context.spHttpClient.post(
-          `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${subFolderPath}/01_WORK')`,
-          SPHttpClient.configurations.v1,
-          optionsHTTP
-        );
-      })
-      .then(() => {
-        console.log(`Created 01_WORK in: ${subFolderPath}`);
-      })
-      .then(() => {
-        // Create the "02_SUBMIT" folder within each subfolder
-        return this.context.spHttpClient.post(
-          `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${subFolderPath}/02_SUBMIT')`,
-          SPHttpClient.configurations.v1,
-          optionsHTTP
-        );
-      })
-      .then(() => {
-        console.log(`Created 02_SUBMIT in: ${subFolderPath}`);
-      })
-
       .catch((error) => {
         console.error("Error creating subfolder:", error);
-        throw error;
       });
   }
 
@@ -838,28 +846,24 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
     return this.context.spHttpClient
       .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/${folderName}')`,
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/PROJECT/${folderName}')`,
         SPHttpClient.configurations.v1,
         optionsHTTP
       )
       .then((response: SPHttpClientResponse) => response.json())
       .then(() => {
-        console.log(`Folder created: ${folderName}`);
-        alert(`Folder created: ${folderName}`);
+        console.log(
+          `Created folders in: Shared Documents/PROJECT/${folderName}`
+        );
+        alert(`Created folders in: Shared Documents/PROJECT/${folderName}`);
         return Promise.all(
           subFolderNames.map((subFolderName) =>
-            this.createSubfolder(folderName, subFolderName).then(() => {
-              console.log(
-                `Subfolder created: ${subFolderName} in ${folderName}`
-              );
-              alert(`Subfolder created: ${subFolderName} in ${folderName}`);
-            })
+            this.createSubfolder(folderName, subFolderName)
           )
         );
       })
       .catch((error) => {
         console.error("Error creating folder or subfolders:", error);
-        throw error;
       });
   }
 
@@ -867,7 +871,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   private onCreateFolder(): Promise<any> {
     return this.getFileFromSharePoint()
       .then((folderSubfolderPairs) => {
-        // Group subfolder names by their folder
+        //Nhóm các thư mục con theo thư mục cha
         const folderMap = folderSubfolderPairs.reduce((acc, pair) => {
           if (!acc[pair.folderName]) {
             acc[pair.folderName] = [];
@@ -876,7 +880,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           return acc;
         }, {} as Record<string, string[]>);
 
-        // Create folders with their respective subfolders
+        //Tạo các thư mục kèm các thư mục con tương ứng
         const promises = [];
         for (const folderName in folderMap) {
           if (folderMap.hasOwnProperty(folderName)) {
@@ -912,9 +916,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .catch((error) => console.error("Error fetching groups:", error));
   }
 
-  //Lấy ID của item dựa trên tên giá trị ở cột Note
+  //Lấy ID của item dựa trên tên giá trị ở cột Branch
   private getItemId(nameItems: string): Promise<number[]> {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=Note eq '${nameItems}'&$select=ID`;
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=Branch eq '${nameItems}'&$select=ID`;
     return this.context.spHttpClient
       .get(requestUrl, SPHttpClient.configurations.v1)
       .then((response: SPHttpClientResponse) => {
