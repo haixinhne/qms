@@ -7,12 +7,12 @@ import * as strings from "HelloWorldWebPartStrings";
 import * as XLSX from "xlsx";
 import { getIdGroup, manageRoles } from "./SetPermissions";
 
-//Hải add
 import {
   SPHttpClient,
   SPHttpClientResponse,
   ISPHttpClientOptions,
 } from "@microsoft/sp-http";
+
 import { __metadata } from "tslib";
 
 //Url file Excel
@@ -24,7 +24,6 @@ export interface IHelloWorldWebPartProps {
   description: string;
 }
 
-//Hải add
 export interface ISPLists {
   value: ISPList[];
 }
@@ -79,14 +78,14 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       return;
     }
 
-    //Display----------------------------------------------------------------------------------------------------------------------------------------------------
+    //Activity Log----------------------------------------------------------------------------------------------------------------------------------------------------
     //Hàm Save file json vào thư mục mỗi khi click vào 1 nút
     const saveJsonSharePoint = (
-      folderPath: string,
+      folderUrl: string,
       fileName: string,
       jsonData: string
     ) => {
-      const url = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${folderPath}')/Files/add(url='${fileName}',overwrite=true)`;
+      const url = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/Files/add(url='${fileName}',overwrite=true)`;
       this.context.spHttpClient
         .post(url, SPHttpClient.configurations.v1, {
           headers: {
@@ -108,9 +107,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
     //Hiển thị nội dung từ file Json
     const displayJsonContent = () => {
-      const folderPath = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
+      const folderUrl = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
       const fileName = "activityLog.json";
-      const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderPath}/${fileName}')/$value`;
+      const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
 
       this.context.spHttpClient
         .get(fileUrl, SPHttpClient.configurations.v1, {
@@ -158,9 +157,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       this.getUserName().then((userName) => {
         const getTimestamp = new Date().toLocaleString();
         const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
-        const folderPath = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
+        const folderUrl = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
         const fileName = "activityLog.json";
-        const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderPath}/${fileName}')/$value`;
+        const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
 
         this.context.spHttpClient
           .get(fileUrl, SPHttpClient.configurations.v1, {
@@ -192,7 +191,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               .then((currentData) => {
                 currentData.push(getMessage);
                 const updatedJson = JSON.stringify(currentData, null, 1);
-                saveJsonSharePoint(folderPath, fileName, updatedJson);
+                saveJsonSharePoint(folderUrl, fileName, updatedJson);
                 displayJsonContent();
               });
           })
@@ -219,6 +218,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       clickCreateFolder.addEventListener("click", () => {
         this.onCreateFolder();
         handleClick("Create Folder");
+        displayJsonContent();
       });
     } else {
       console.warn("clickCreateFolder element not found.");
@@ -247,6 +247,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         });
 
         handleClick("Set Permissions");
+        displayJsonContent();
       });
     }
 
@@ -805,10 +806,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         // Tạo các thư mục con
         return subFolders.reduce((prevPromise, folder) => {
           return prevPromise.then(() => {
-            const folderPath = `${subFolderUrl}/${folder}`;
+            const folderUrl = `${subFolderUrl}/${folder}`;
             return this.context.spHttpClient
               .post(
-                `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${folderPath}')`,
+                `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${folderUrl}')`,
                 SPHttpClient.configurations.v1,
                 optionsHTTP
               )
@@ -816,7 +817,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                 // Tạo các thư mục con nhỏ hơn trong từng thư mục con
                 const childFolders = childSubFolders[folder];
                 return childFolders.reduce((childPrevPromise, childFolder) => {
-                  const childFolderPath = `${folderPath}/${childFolder}`;
+                  const childFolderPath = `${folderUrl}/${childFolder}`;
                   return childPrevPromise.then(() => {
                     return this.context.spHttpClient.post(
                       `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${childFolderPath}')`,
