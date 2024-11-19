@@ -366,7 +366,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Tạo SharePoint list
+  //Tạo sharepoint list
   private async createSharePointList(listName: string): Promise<any> {
     const listNameExists = await this.checkNameSharepointList(listName);
     if (listNameExists) {
@@ -425,7 +425,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     }
   }
 
-  //Tạo cột Sharepoint list
+  //Tạo cột sharepoint list
   private async createColumnInSharePoint(
     listName: string,
     columnNames: string
@@ -623,7 +623,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Click Tạo SharePoint list, tạo cột, tạo mới, update, xóa items
+  //Click Tạo sharepoint list, tạo cột, tạo mới, update, xóa items
   private onClickButtonCreateSharepoint(): void {
     if (!nameSharepointList) {
       alert("Please enter a name for the SharePoint list!");
@@ -715,7 +715,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   }
 
   //Tạo các thư mục từ sharepoint------------------------------------------------------------------------------------------------------------------------------
-  // Hàm lấy data từ SharePoint list (Lấy tên thư mục là 1 cột ở sharepoint list)
+  // Hàm lấy data từ sharepoint list (Lấy tên thư mục là 1 cột ở sharepoint list)
   private getFileFromSharePoint(): Promise<
     { folderName: string; subFolderName: string }[]
   > {
@@ -746,7 +746,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .catch((error) => {
         console.error("Error fetching SharePoint list data:", error);
-        throw error;
       });
   }
 
@@ -776,7 +775,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         "Funtion Checklist AS",
         "Funtion Checklist ME",
         "Designer Approval Request",
-        "Design Review 23 AS/ME",
+        "Design Review 23 AS-ME",
       ],
       Build: [
         "Project outline",
@@ -795,7 +794,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return response.json();
       })
       .then(() => {
-        // Tạo các thư mục con theo danh sách
+        // Tạo các thư mục con
         return subFolders.reduce((prevPromise, folder) => {
           return prevPromise.then(() => {
             const folderPath = `${subFolderUrl}/${folder}`;
@@ -823,8 +822,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         }, Promise.resolve());
       })
       .then(() => {
-        console.log(`Created subfolders in: ${subFolderUrl}`);
-        alert(`Created subfolders in: ${subFolderUrl}`);
+        console.log(
+          `Created subfolders ${subFolderName} in: Shared Documents/PROJECT/${parentFolderName}`
+        );
+        alert(
+          `Created subfolders ${subFolderName} in: Shared Documents/PROJECT/${parentFolderName}`
+        );
       })
       .catch((error) => {
         console.error("Error creating subfolder:", error);
@@ -853,9 +856,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .then((response: SPHttpClientResponse) => response.json())
       .then(() => {
         console.log(
-          `Created folders in: Shared Documents/PROJECT/${folderName}`
+          `Created folders ${folderName} in: Shared Documents/PROJECT`
         );
-        alert(`Created folders in: Shared Documents/PROJECT/${folderName}`);
+        alert(`Created folders ${folderName} in: Shared Documents/PROJECT`);
         return Promise.all(
           subFolderNames.map((subFolderName) =>
             this.createSubfolder(folderName, subFolderName)
