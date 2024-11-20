@@ -1,7 +1,7 @@
 import { SPHttpClient, SPHttpClientResponse } from "@microsoft/sp-http";
 
 //Lấy tên user name
-const getUserName = (
+export const getUserName = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string
 ): Promise<string> => {
@@ -11,24 +11,24 @@ const getUserName = (
       SPHttpClient.configurations.v1
     )
     .then((response: SPHttpClientResponse) => response.json())
-    .then((data: any) => data.Title);
+    .then((data) => data.Title);
 };
 
 //Hàm tạo nội dung khi click
 export const handleClick = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  listname: string,
+  listName: string,
   buttonName: string
 ) => {
   getUserName(spHttpClient, sharepointUrl).then((userName) => {
     const getTimestamp = new Date().toLocaleString();
     const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
-    const folderUrl = `/sites/${listname}/Shared Documents/ActivityHistory`;
+    const folderUrl = `/sites/${listName}/Shared Documents/ActivityHistory`;
     const fileName = "activityLog.json";
-    const fileUrl = `${spHttpClient}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
+    const fileUrl = `${sharepointUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
 
-    spHttpClient
+    return spHttpClient
       .get(fileUrl, SPHttpClient.configurations.v1, {
         headers: {
           Accept: "application/json;odata=verbose",
@@ -36,7 +36,7 @@ export const handleClick = (
           "odata-version": "",
         },
       })
-      .then((response: any) => {
+      .then((response) => {
         if (response.ok) {
           return response.text();
         } else if (response.status === 404) {
@@ -48,7 +48,7 @@ export const handleClick = (
           );
         }
       })
-      .then((existingContent: any) => {
+      .then((existingContent) => {
         return Promise.resolve()
           .then(() => JSON.parse(existingContent))
           .catch((error) => {
@@ -58,48 +58,29 @@ export const handleClick = (
           .then((currentData) => {
             currentData.push(getMessage);
             const updatedJson = JSON.stringify(currentData, null, 1);
-            saveJsonSharePoint(context, listName, fileName, updatedJson);
-            displayJsonContent(context, nameSharepointList);
+            saveJsonSharePoint(
+              spHttpClient,
+              sharepointUrl,
+              folderUrl,
+              fileName,
+              updatedJson
+            );
+            displayJsonContent(spHttpClient, sharepointUrl, listName);
           });
       })
-      .catch((error: any) =>
-        console.error("Error processing JSON file:", error)
-      );
+      .catch((error) => console.error("Error processing JSON file:", error));
   });
 };
 
-//Hàm Save file json vào thư mục mỗi khi click vào 1 nút
-const saveJsonSharePoint = (
+//Hiển thị nội dung từ file Json
+export const displayJsonContent = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  listName: string,
-  fileName: string,
-  jsonData: string
+  listName: string
 ) => {
-  const url = `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${listName}')/Files/add(url='${fileName}',overwrite=true)`;
-  spHttpClient
-    .post(url, SPHttpClient.configurations.v1, {
-      headers: {
-        Accept: "application/json;odata=verbose",
-        "Content-Type": "application/json;odata=verbose",
-        "odata-version": "",
-      },
-      body: jsonData,
-    })
-    .then((response: SPHttpClientResponse) => {
-      if (!response.ok) {
-        response
-          .json()
-          .then((error) => console.error("Error saving file:", error));
-      }
-    });
-};
-
-//Hiển thị nội dung từ file Json
-const displayJsonContent = (spHttpClient: SPHttpClient, listName: string) => {
   const folderUrl = `/sites/${listName}/Shared Documents/ActivityHistory`;
   const fileName = "activityLog.json";
-  const fileUrl = `${spHttpClient}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
+  const fileUrl = `${sharepointUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
 
   spHttpClient
     .get(fileUrl, SPHttpClient.configurations.v1, {
@@ -109,7 +90,7 @@ const displayJsonContent = (spHttpClient: SPHttpClient, listName: string) => {
         "odata-version": "",
       },
     })
-    .then((response: any) => {
+    .then((response) => {
       if (response.ok) {
         return response.text();
       } else {
@@ -118,8 +99,8 @@ const displayJsonContent = (spHttpClient: SPHttpClient, listName: string) => {
         );
       }
     })
-    .then((jsonContent: any) => JSON.parse(jsonContent))
-    .then((parsedContent: any) => {
+    .then((jsonContent) => JSON.parse(jsonContent))
+    .then((parsedContent) => {
       if (!Array.isArray(parsedContent)) {
         return Promise.reject("JSON content is not an array.");
       }
@@ -137,5 +118,32 @@ const displayJsonContent = (spHttpClient: SPHttpClient, listName: string) => {
         return Promise.reject("Container element not found!");
       }
     })
-    .catch((error: any) => console.error("Error processing JSON file:", error));
+    .catch((error) => console.error("Error processing JSON file:", error));
+};
+
+//Hàm Save file json vào thư mục mỗi khi click vào 1 nút
+const saveJsonSharePoint = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  folderUrl: string,
+  fileName: string,
+  jsonData: string
+) => {
+  const url = `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/Files/add(url='${fileName}',overwrite=true)`;
+  return spHttpClient
+    .post(url, SPHttpClient.configurations.v1, {
+      headers: {
+        Accept: "application/json;odata=verbose",
+        "Content-Type": "application/json;odata=verbose",
+        "odata-version": "",
+      },
+      body: jsonData,
+    })
+    .then((response: SPHttpClientResponse) => {
+      if (!response.ok) {
+        response
+          .json()
+          .then((error) => console.error("Error saving file:", error));
+      }
+    });
 };

@@ -6,6 +6,7 @@ import styles from "./HelloWorldWebPart.module.scss";
 import * as strings from "HelloWorldWebPartStrings";
 import * as XLSX from "xlsx";
 import { getIdGroup, manageRoles } from "./SetPermissions";
+import { handleClick, getUserName } from "./ActivityLog";
 
 import {
   SPHttpClient,
@@ -78,136 +79,140 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       return;
     }
 
-    //Activity Log----------------------------------------------------------------------------------------------------------------------------------------------------
-    //Hàm Save file json vào thư mục mỗi khi click vào 1 nút
-    const saveJsonSharePoint = (
-      folderUrl: string,
-      fileName: string,
-      jsonData: string
-    ) => {
-      const url = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/Files/add(url='${fileName}',overwrite=true)`;
-      this.context.spHttpClient
-        .post(url, SPHttpClient.configurations.v1, {
-          headers: {
-            Accept: "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose",
-            "odata-version": "",
-          },
-          body: jsonData,
-        })
-        .then((response: SPHttpClientResponse) => {
-          if (response.ok) {
-          } else {
-            response.json().then((error) => {
-              console.error("Error saving file:", error);
-            });
-          }
-        });
-    };
+    // //Activity Log----------------------------------------------------------------------------------------------------------------------------------------------------
+    // //Hàm Save file json vào thư mục mỗi khi click vào 1 nút
+    // const saveJsonSharePoint = (
+    //   folderUrl: string,
+    //   fileName: string,
+    //   jsonData: string
+    // ) => {
+    //   const url = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/Files/add(url='${fileName}',overwrite=true)`;
+    //   this.context.spHttpClient
+    //     .post(url, SPHttpClient.configurations.v1, {
+    //       headers: {
+    //         Accept: "application/json;odata=verbose",
+    //         "Content-Type": "application/json;odata=verbose",
+    //         "odata-version": "",
+    //       },
+    //       body: jsonData,
+    //     })
+    //     .then((response: SPHttpClientResponse) => {
+    //       if (response.ok) {
+    //       } else {
+    //         response.json().then((error) => {
+    //           console.error("Error saving file:", error);
+    //         });
+    //       }
+    //     });
+    // };
 
-    //Hiển thị nội dung từ file Json
-    const displayJsonContent = () => {
-      const folderUrl = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
-      const fileName = "activityLog.json";
-      const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
+    // //Hiển thị nội dung từ file Json
+    // const displayJsonContent = () => {
+    //   const folderUrl = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
+    //   const fileName = "activityLog.json";
+    //   const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
 
-      this.context.spHttpClient
-        .get(fileUrl, SPHttpClient.configurations.v1, {
-          headers: {
-            Accept: "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose",
-            "odata-version": "",
-          },
-        })
-        .then((response) => {
-          if (response.ok) {
-            return response.text();
-          } else {
-            return Promise.reject(
-              `Error retrieving file. Status: ${response.status}, ${response.statusText}`
-            );
-          }
-        })
-        .then((jsonContent) => JSON.parse(jsonContent))
-        .then((parsedContent) => {
-          if (!Array.isArray(parsedContent)) {
-            return Promise.reject("JSON content is not an array.");
-          }
+    //   this.context.spHttpClient
+    //     .get(fileUrl, SPHttpClient.configurations.v1, {
+    //       headers: {
+    //         Accept: "application/json;odata=verbose",
+    //         "Content-Type": "application/json;odata=verbose",
+    //         "odata-version": "",
+    //       },
+    //     })
+    //     .then((response) => {
+    //       if (response.ok) {
+    //         return response.text();
+    //       } else {
+    //         return Promise.reject(
+    //           `Error retrieving file. Status: ${response.status}, ${response.statusText}`
+    //         );
+    //       }
+    //     })
+    //     .then((jsonContent) => JSON.parse(jsonContent))
+    //     .then((parsedContent) => {
+    //       if (!Array.isArray(parsedContent)) {
+    //         return Promise.reject("JSON content is not an array.");
+    //       }
 
-          const contentContainer = document.getElementById("qms_actions");
-          if (contentContainer) {
-            contentContainer.innerHTML = "";
-            parsedContent.reverse().forEach((item) => {
-              const paragraph = document.createElement("p");
-              paragraph.className = "qms_desc";
-              paragraph.textContent = item;
-              contentContainer.appendChild(paragraph);
-            });
-          } else {
-            return Promise.reject("Container element not found!");
-          }
-        })
-        .catch((error) => {
-          console.error("Error processing JSON file:", error);
-        });
-    };
+    //       const contentContainer = document.getElementById("qms_actions");
+    //       if (contentContainer) {
+    //         contentContainer.innerHTML = "";
+    //         parsedContent.reverse().forEach((item) => {
+    //           const paragraph = document.createElement("p");
+    //           paragraph.className = "qms_desc";
+    //           paragraph.textContent = item;
+    //           contentContainer.appendChild(paragraph);
+    //         });
+    //       } else {
+    //         return Promise.reject("Container element not found!");
+    //       }
+    //     })
+    //     .catch((error) => {
+    //       console.error("Error processing JSON file:", error);
+    //     });
+    // };
 
-    //Hàm tạo nội dung khi click
-    const handleClick = (buttonName: string) => {
-      this.getUserName().then((userName) => {
-        const getTimestamp = new Date().toLocaleString();
-        const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
-        const folderUrl = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
-        const fileName = "activityLog.json";
-        const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
+    // //Hàm tạo nội dung khi click
+    // const handleClick = (buttonName: string) => {
+    //   this.getUserName().then((userName) => {
+    //     const getTimestamp = new Date().toLocaleString();
+    //     const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
+    //     const folderUrl = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
+    //     const fileName = "activityLog.json";
+    //     const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
 
-        this.context.spHttpClient
-          .get(fileUrl, SPHttpClient.configurations.v1, {
-            headers: {
-              Accept: "application/json;odata=verbose",
-              "Content-Type": "application/json;odata=verbose",
-              "odata-version": "",
-            },
-          })
-          .then((response) => {
-            if (response.ok) {
-              return response.text();
-            } else if (response.status === 404) {
-              console.error("File not found. Creating a new one.");
-              return "[]";
-            } else {
-              return Promise.reject(
-                `Error retrieving file. Status: ${response.status}, ${response.statusText}`
-              );
-            }
-          })
-          .then((existingContent) => {
-            return Promise.resolve()
-              .then(() => JSON.parse(existingContent))
-              .catch((error) => {
-                console.error("Error parsing existing JSON content:", error);
-                return [];
-              })
-              .then((currentData) => {
-                currentData.push(getMessage);
-                const updatedJson = JSON.stringify(currentData, null, 1);
-                saveJsonSharePoint(folderUrl, fileName, updatedJson);
-                displayJsonContent();
-              });
-          })
-          .catch((error) => {
-            console.error("Error processing JSON file:", error);
-          });
-      });
-    };
+    //     this.context.spHttpClient
+    //       .get(fileUrl, SPHttpClient.configurations.v1, {
+    //         headers: {
+    //           Accept: "application/json;odata=verbose",
+    //           "Content-Type": "application/json;odata=verbose",
+    //           "odata-version": "",
+    //         },
+    //       })
+    //       .then((response) => {
+    //         if (response.ok) {
+    //           return response.text();
+    //         } else if (response.status === 404) {
+    //           console.error("File not found. Creating a new one.");
+    //           return "[]";
+    //         } else {
+    //           return Promise.reject(
+    //             `Error retrieving file. Status: ${response.status}, ${response.statusText}`
+    //           );
+    //         }
+    //       })
+    //       .then((existingContent) => {
+    //         return Promise.resolve()
+    //           .then(() => JSON.parse(existingContent))
+    //           .catch((error) => {
+    //             console.error("Error parsing existing JSON content:", error);
+    //             return [];
+    //           })
+    //           .then((currentData) => {
+    //             currentData.push(getMessage);
+    //             const updatedJson = JSON.stringify(currentData, null, 1);
+    //             saveJsonSharePoint(folderUrl, fileName, updatedJson);
+    //             displayJsonContent();
+    //           });
+    //       })
+    //       .catch((error) => {
+    //         console.error("Error processing JSON file:", error);
+    //       });
+    //   });
+    // };
 
     //Event click button
     //Tạo sharepoint
     if (clickCreateSharepoint) {
       clickCreateSharepoint.addEventListener("click", () => {
         this.onClickButtonCreateSharepoint();
-        handleClick("Create Sharepoint");
-        displayJsonContent();
+        handleClick(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList,
+          "Create Sharepoint"
+        );
       });
     } else {
       console.warn("clickCreateSharepoint element not found.");
@@ -217,8 +222,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     if (clickCreateFolder) {
       clickCreateFolder.addEventListener("click", () => {
         this.onCreateFolder();
-        handleClick("Create Folder");
-        displayJsonContent();
+        handleClick(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList,
+          "Create Folder"
+        );
       });
     } else {
       console.warn("clickCreateFolder element not found.");
@@ -246,35 +255,39 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           );
         });
 
-        handleClick("Set Permissions");
-        displayJsonContent();
+        handleClick(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList,
+          "Set Permissions"
+        );
       });
     }
 
     this.renderListAsync();
   }
 
-  //Lấy tên user name
-  private getUserName(): Promise<any> {
-    return this.context.spHttpClient
-      .get(
-        `${sharepointUrl}/_api/web/currentuser`,
-        SPHttpClient.configurations.v1
-      )
-      .then((response: SPHttpClientResponse) => {
-        return response.json();
-      })
-      .then((data) => {
-        const userName = data.Title;
-        return userName;
-      });
-  }
+  // //Lấy tên user name
+  // private getUserName(): Promise<any> {
+  //   return this.context.spHttpClient
+  //     .get(
+  //       `${sharepointUrl}/_api/web/currentuser`,
+  //       SPHttpClient.configurations.v1
+  //     )
+  //     .then((response: SPHttpClientResponse) => {
+  //       return response.json();
+  //     })
+  //     .then((data) => {
+  //       const userName = data.Title;
+  //       return userName;
+  //     });
+  // }
 
   //Hàm defaults--------------------------------------------------------------------------------------------------------------------------------------------------
-  protected onInit(): Promise<void> {
+  protected onInit(): Promise<any> {
     return this.getEnvironmentMessage().then((message) => {
       this._environmentMessage = message;
-      return this.getUserName();
+      return getUserName(this.context.spHttpClient, sharepointUrl);
     });
   }
 
