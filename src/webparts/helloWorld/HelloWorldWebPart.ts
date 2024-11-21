@@ -36,6 +36,36 @@ export interface ISPList {
 
 export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorldWebPartProps> {
   private _environmentMessage: string = "";
+  private childSubFolders: { [key: string]: string[] } = {
+    Promotion: [
+      "Basic project data",
+      "Promotion activities",
+      "Reports",
+      "Project risk analysis",
+      "Stakeholder Management",
+      "Design Review 01 AS-ME",
+      "Client Contract Review (CCR)",
+      "Project Approval (EU-Kento)",
+      "Estimate Approval (EU-Kessai)",
+    ],
+    Design: [
+      "Drawings",
+      "Funtion Checklist AS",
+      "Funtion Checklist ME",
+      "Designer Approval Request",
+      "Design Review 23 AS-ME",
+    ],
+    Build: [
+      "Project outline",
+      "PM Policy",
+      "HSE risks (Health, Safely & Env.ment)",
+      "Funtion Checklist Update",
+      "Quality Plan",
+      "Schedule",
+      "Construction Kickoff",
+    ],
+  };
+
   //DOM-------------------------------------------------------------------------------------------------------------------------------------------------------------
   public render(): void {
     this.domElement.innerHTML = `
@@ -61,7 +91,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
          <button class="${
            styles.qms_button
-         }" id="setPermissions">Set Permissions</button></div>
+         }" id="setPermissions">Set Permissions</button>
+
+         <button class="${
+           styles.qms_button
+         }" id="countFiles">Count Files</button>
+         </div>
      <div class="${styles.qms_actions}" id= "qms_actions">
      <p id= "qms_desc"></p>
      </div>
@@ -73,136 +108,14 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const clickCreateFolder = this.domElement.querySelector("#createFolder");
     const setPermissions = this.domElement.querySelector("#setPermissions");
     const actionsContainer = this.domElement.querySelector("#qms_actions");
+    const clickCountFiles = this.domElement.querySelector("#countFiles");
 
     if (!actionsContainer) {
       console.error("The actionsContainer element was not found.");
       return;
     }
 
-    // //Activity Log----------------------------------------------------------------------------------------------------------------------------------------------------
-    // //Hàm Save file json vào thư mục mỗi khi click vào 1 nút
-    // const saveJsonSharePoint = (
-    //   folderUrl: string,
-    //   fileName: string,
-    //   jsonData: string
-    // ) => {
-    //   const url = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/Files/add(url='${fileName}',overwrite=true)`;
-    //   this.context.spHttpClient
-    //     .post(url, SPHttpClient.configurations.v1, {
-    //       headers: {
-    //         Accept: "application/json;odata=verbose",
-    //         "Content-Type": "application/json;odata=verbose",
-    //         "odata-version": "",
-    //       },
-    //       body: jsonData,
-    //     })
-    //     .then((response: SPHttpClientResponse) => {
-    //       if (response.ok) {
-    //       } else {
-    //         response.json().then((error) => {
-    //           console.error("Error saving file:", error);
-    //         });
-    //       }
-    //     });
-    // };
-
-    // //Hiển thị nội dung từ file Json
-    // const displayJsonContent = () => {
-    //   const folderUrl = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
-    //   const fileName = "activityLog.json";
-    //   const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
-
-    //   this.context.spHttpClient
-    //     .get(fileUrl, SPHttpClient.configurations.v1, {
-    //       headers: {
-    //         Accept: "application/json;odata=verbose",
-    //         "Content-Type": "application/json;odata=verbose",
-    //         "odata-version": "",
-    //       },
-    //     })
-    //     .then((response) => {
-    //       if (response.ok) {
-    //         return response.text();
-    //       } else {
-    //         return Promise.reject(
-    //           `Error retrieving file. Status: ${response.status}, ${response.statusText}`
-    //         );
-    //       }
-    //     })
-    //     .then((jsonContent) => JSON.parse(jsonContent))
-    //     .then((parsedContent) => {
-    //       if (!Array.isArray(parsedContent)) {
-    //         return Promise.reject("JSON content is not an array.");
-    //       }
-
-    //       const contentContainer = document.getElementById("qms_actions");
-    //       if (contentContainer) {
-    //         contentContainer.innerHTML = "";
-    //         parsedContent.reverse().forEach((item) => {
-    //           const paragraph = document.createElement("p");
-    //           paragraph.className = "qms_desc";
-    //           paragraph.textContent = item;
-    //           contentContainer.appendChild(paragraph);
-    //         });
-    //       } else {
-    //         return Promise.reject("Container element not found!");
-    //       }
-    //     })
-    //     .catch((error) => {
-    //       console.error("Error processing JSON file:", error);
-    //     });
-    // };
-
-    // //Hàm tạo nội dung khi click
-    // const handleClick = (buttonName: string) => {
-    //   this.getUserName().then((userName) => {
-    //     const getTimestamp = new Date().toLocaleString();
-    //     const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
-    //     const folderUrl = `/sites/${nameSharepointList}/Shared Documents/ActivityHistory`;
-    //     const fileName = "activityLog.json";
-    //     const fileUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
-
-    //     this.context.spHttpClient
-    //       .get(fileUrl, SPHttpClient.configurations.v1, {
-    //         headers: {
-    //           Accept: "application/json;odata=verbose",
-    //           "Content-Type": "application/json;odata=verbose",
-    //           "odata-version": "",
-    //         },
-    //       })
-    //       .then((response) => {
-    //         if (response.ok) {
-    //           return response.text();
-    //         } else if (response.status === 404) {
-    //           console.error("File not found. Creating a new one.");
-    //           return "[]";
-    //         } else {
-    //           return Promise.reject(
-    //             `Error retrieving file. Status: ${response.status}, ${response.statusText}`
-    //           );
-    //         }
-    //       })
-    //       .then((existingContent) => {
-    //         return Promise.resolve()
-    //           .then(() => JSON.parse(existingContent))
-    //           .catch((error) => {
-    //             console.error("Error parsing existing JSON content:", error);
-    //             return [];
-    //           })
-    //           .then((currentData) => {
-    //             currentData.push(getMessage);
-    //             const updatedJson = JSON.stringify(currentData, null, 1);
-    //             saveJsonSharePoint(folderUrl, fileName, updatedJson);
-    //             displayJsonContent();
-    //           });
-    //       })
-    //       .catch((error) => {
-    //         console.error("Error processing JSON file:", error);
-    //       });
-    //   });
-    // };
-
-    //Event click button
+    //Event click button------------------------------------------------------------------------------------------------------------------------------------------
     //Tạo sharepoint
     if (clickCreateSharepoint) {
       clickCreateSharepoint.addEventListener("click", () => {
@@ -214,8 +127,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           "Create Sharepoint"
         );
       });
-    } else {
-      console.warn("clickCreateSharepoint element not found.");
     }
 
     //Tạo folder
@@ -229,8 +140,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           "Create Folder"
         );
       });
-    } else {
-      console.warn("clickCreateFolder element not found.");
     }
 
     //Set Permissions
@@ -264,24 +173,15 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
     }
 
+    //Count files
+    if (clickCountFiles) {
+      clickCountFiles.addEventListener("click", () => {
+        this.onCountFiles();
+      });
+    }
+
     this.renderListAsync();
   }
-
-  // //Lấy tên user name
-  // private getUserName(): Promise<any> {
-  //   return this.context.spHttpClient
-  //     .get(
-  //       `${sharepointUrl}/_api/web/currentuser`,
-  //       SPHttpClient.configurations.v1
-  //     )
-  //     .then((response: SPHttpClientResponse) => {
-  //       return response.json();
-  //     })
-  //     .then((data) => {
-  //       const userName = data.Title;
-  //       return userName;
-  //     });
-  // }
 
   //Hàm defaults--------------------------------------------------------------------------------------------------------------------------------------------------
   protected onInit(): Promise<any> {
@@ -327,7 +227,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .catch(() => {});
   }
 
-  //Tạo sharepoint list từ excel----------------------------------------------------------------------------------------------------------------------------------
+  //Tạo sharepoint list từ excel, add, update, xóa items từ sharepoint--------------------------------------------------------------------------------------------
   //Lấy file excel
   private getFileExcelFromSharePoint(excelUrl: string): Promise<ArrayBuffer> {
     return this.context.spHttpClient
@@ -510,11 +410,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items?$filter=CustomID eq '${itemData.CustomID}'`,
       SPHttpClient.configurations.v1
     );
-    //Lưu kết quả các items nếu tồn tại
+
     const existingItems = await checkExistingItem.json();
     const saveExistingItem = existingItems.value && existingItems.value[0];
 
-    //Nếu item đã tồn tại thì phương thức là update, nếu ko thì tạo mới
     let endpoint = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items`;
     let method = "POST"; // default là để tạo mới
 
@@ -713,9 +612,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           )
           .then((response) => {
             if (!response.ok) {
-              throw new Error(
-                `Failed to retrieve items: ${response.statusText}`
-              );
+              console.log(`Failed to retrieve items: ${response.statusText}`);
             }
             return response.json();
           })
@@ -785,27 +682,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     };
     const subFolderUrl = `Shared Documents/PROJECT/${parentFolderName}/${subFolderName}`;
     const subFolders = ["Promotion", "Design", "Build"];
-    const childSubFolders: { [key: string]: string[] } = {
-      Promotion: [
-        "Basic project data",
-        "Promotion activities",
-        "Reports",
-        "Project risk analysis",
-      ],
-      Design: [
-        "Drawings",
-        "Funtion Checklist AS",
-        "Funtion Checklist ME",
-        "Designer Approval Request",
-        "Design Review 23 AS-ME",
-      ],
-      Build: [
-        "Project outline",
-        "PM Policy",
-        "HSE risks (Health, Safely & Env.ment)",
-      ],
-    };
-
+    const arrayFolderUrl: string[] = [];
     return this.context.spHttpClient
       .post(
         `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/PROJECT/${parentFolderName}/${subFolderName}')`,
@@ -828,12 +705,13 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               )
               .then(() => {
                 // Tạo các thư mục con nhỏ hơn trong từng thư mục con
-                const childFolders = childSubFolders[folder];
+                const childFolders = this.childSubFolders[folder];
                 return childFolders.reduce((childPrevPromise, childFolder) => {
-                  const childFolderPath = `${folderUrl}/${childFolder}`;
+                  const childFolderUrl = `${folderUrl}/${childFolder}`;
+                  arrayFolderUrl.push(childFolderUrl);
                   return childPrevPromise.then(() => {
                     return this.context.spHttpClient.post(
-                      `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${childFolderPath}')`,
+                      `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${childFolderUrl}')`,
                       SPHttpClient.configurations.v1,
                       optionsHTTP
                     );
@@ -895,9 +773,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   //Click Tạo folder
   private onCreateFolder(): Promise<any> {
     return this.getFileFromSharePoint()
-      .then((folderSubfolderPairs) => {
-        //Nhóm các thư mục con theo thư mục cha
-        const folderMap = folderSubfolderPairs.reduce((acc, pair) => {
+      .then((folderPairs) => {
+        const folderMap = folderPairs.reduce((acc, pair) => {
           if (!acc[pair.folderName]) {
             acc[pair.folderName] = [];
           }
@@ -906,166 +783,145 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         }, {} as Record<string, string[]>);
 
         //Tạo các thư mục kèm các thư mục con tương ứng
-        const promises = [];
+        const loopCreateFolder = [];
         for (const folderName in folderMap) {
           if (folderMap.hasOwnProperty(folderName)) {
             const subFolderNames = folderMap[folderName];
-            promises.push(this.createFolder(folderName, subFolderNames));
+            loopCreateFolder.push(
+              this.createFolder(folderName, subFolderNames)
+            );
           }
         }
 
-        return Promise.all(promises);
+        return Promise.all(loopCreateFolder);
       })
       .catch((error) => {
         console.error("Error processing folders and subfolders:", error);
       });
   }
 
-  // //Set Permissions-----------------------------------------------------------------------------------------------------------------------------------------------
-  // //Lấy ID group
-  // private getIdGroup() {
-  //   this.context.spHttpClient
-  //     .get(
-  //       `${sharepointUrl}/_api/web/sitegroups`,
-  //       SPHttpClient.configurations.v1
-  //     )
-  //     .then((response: SPHttpClientResponse) => {
-  //       return response.json();
-  //     })
-  //     .then((data) => {
-  //       const groups: { Title: string; Id: number }[] = data.value;
-  //       groups.forEach((group: { Title: string; Id: number }) => {
-  //         console.log(`Group Name: ${group.Title}, ID: ${group.Id}`);
-  //       });
-  //     })
-  //     .catch((error) => console.error("Error fetching groups:", error));
-  // }
+  //Đếm số lượng folder----------------------------------------------------------------------------------------------------------------------------------------
+  private countFiles(folderUrls: string[]): Promise<{
+    totalFiles: number;
+    approvedFiles: number;
+    percentFiles: number;
+  }> {
+    const fetchFileCounts = (
+      countFolderUrl: string
+    ): Promise<{ total: number; approved: number }> => {
+      return this.context.spHttpClient
+        .get(
+          `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
+          SPHttpClient.configurations.v1
+        )
+        .then((response) => {
+          if (!response.ok) {
+            console.log(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const files = data.value || [];
+          const total = files.length;
 
-  // //Lấy ID của item dựa trên tên giá trị ở cột Branch
-  // private getItemId(nameItems: string): Promise<number[]> {
-  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=Branch eq '${nameItems}'&$select=ID`;
-  //   return this.context.spHttpClient
-  //     .get(requestUrl, SPHttpClient.configurations.v1)
-  //     .then((response: SPHttpClientResponse) => {
-  //       if (!response.ok) {
-  //         return Promise.reject("Failed to retrieve item ID");
-  //       }
-  //       return response.json();
-  //     })
-  //     .then((data) => {
-  //       if (data.value && data.value.length > 0) {
-  //         const itemId = data.value.map((item: { ID: number }) => item.ID);
-  //         return itemId;
-  //       } else {
-  //         return Promise.reject("Item not found");
-  //       }
-  //     });
-  // }
+          const approved = files.filter((file: any) => {
+            const fileNameWithoutExtension = file.Name.split(".")
+              .slice(0, -1)
+              .join(".");
+            return fileNameWithoutExtension.endsWith("Approved");
+          }).length;
 
-  // //Gửi yêu cầu tới Sharepoint
-  // private executeRequest(url: string, method: string): Promise<void> {
-  //   return this.context.spHttpClient
-  //     .post(url, SPHttpClient.configurations.v1, {
-  //       headers: {
-  //         Accept: "application/json;odata=verbose",
-  //         "X-RequestDigest":
-  //           this.context.pageContext.legacyPageContext.formDigestValue,
-  //       },
-  //     })
-  //     .then((response: SPHttpClientResponse) => {
-  //       if (!response.ok) {
-  //         return response.json().then((errorDetails) => {
-  //           console.error("Error details:", errorDetails);
-  //           return Promise.reject(
-  //             "Request failed: " + errorDetails.error.message.value
-  //           );
-  //         });
-  //       }
-  //       return Promise.resolve();
-  //     });
-  // }
+          return { total, approved };
+        })
+        .catch((error) => {
+          console.error(`Error fetching files from ${countFolderUrl}:`, error);
+          return { total: 0, approved: 0 };
+        });
+    };
 
-  // //Ngắt quyền kế thừa của mục
-  // private breakRoleInheritanceItem(itemId: number): Promise<number> {
-  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/breakroleinheritance(true)`;
-  //   return this.executeRequest(requestUrl, "POST").then(() => {
-  //     console.log(`Break role inheritance for item ID: ${itemId} success`);
-  //     return itemId;
-  //   });
-  // }
+    const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); //Lặp qua các thư mục và cộng dồn kết quả
+    return Promise.all(loopFolders).then((results) => {
+      const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
+      const approvedFiles = results.reduce(
+        (sum, result) => sum + result.approved,
+        0
+      );
+      const percentFiles = totalFiles > 0 ? approvedFiles / totalFiles : 0;
+      return { totalFiles, approvedFiles, percentFiles };
+    });
+  }
 
-  // //Xóa quyền của các nhóm hiện tại khỏi mục
-  // private removeCurrentRoleFromItem(
-  //   itemId: number,
-  //   groupId: number
-  // ): Promise<number> {
-  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/roleassignments/removeroleassignment(principalid=${groupId})`;
-  //   return this.executeRequest(requestUrl, "POST").then(() => {
-  //     console.log(`Remove the current group role from item ID: ${itemId}!`);
-  //     return itemId;
-  //   });
-  // }
+  //Lấy Url các thư mục
+  private getUrlCountFiles(
+    parentFolderName: string,
+    subFolderName: string | string[]
+  ): Promise<any> {
+    if (typeof subFolderName === "string") {
+      subFolderName = [subFolderName];
+    }
 
-  // //Xóa tất cả các quyền hiện có của nhóm khỏi mục
-  // private removeAllRolesFromItem(itemId: number): Promise<number> {
-  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/roleassignments`;
-  //   return this.context.spHttpClient
-  //     .get(requestUrl, SPHttpClient.configurations.v1)
-  //     .then((response: SPHttpClientResponse) => {
-  //       if (!response.ok) {
-  //         return Promise.reject("Failed to retrieve role assignments");
-  //       }
-  //       return response.json();
-  //     })
-  //     .then((data) => {
-  //       // Xóa tất cả các quyền (nếu có)
-  //       const removePromises = data.value.map((roleAssignment: any) =>
-  //         this.removeCurrentRoleFromItem(itemId, roleAssignment.PrincipalId)
-  //       );
-  //       return Promise.all(removePromises).then(() => itemId);
-  //     });
-  // }
+    const subFolderUrl = `Shared Documents/PROJECT/${parentFolderName}/${subFolderName}`;
+    const subFolders = ["Promotion", "Design", "Build"];
+    const arrayFolderUrl: string[] = [];
 
-  // //Thêm quyền mới cho nhóm
-  // private addNewRoleItem(
-  //   itemId: number,
-  //   groupId: number,
-  //   roleId: number
-  // ): Promise<void> {
-  //   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
-  //   return this.executeRequest(requestUrl, "POST").then(() =>
-  //     console.log(`Updated role for item ID: ${itemId} success`)
-  //   );
-  // }
+    subFolders.forEach((folder) => {
+      const folderUrl = `${subFolderUrl}/${folder}`;
+      arrayFolderUrl.push(folderUrl);
+      const childFolders = this.childSubFolders[folder];
+      childFolders.forEach((childFolder) => {
+        const childFolderUrl = `${folderUrl}/${childFolder}`;
+        arrayFolderUrl.push(childFolderUrl);
+      });
+    });
 
-  // //Hàm quản lý quyền
-  // public manageRoles(
-  //   nameItems: string,
-  //   groupId: number,
-  //   newRoleId: number
-  // ): void {
-  //   this.getItemId(nameItems)
-  //     .then((itemIds: any) => {
-  //       return Promise.all(
-  //         itemIds.map((itemId: any) =>
-  //           this.breakRoleInheritanceItem(itemId)
-  //             .then(() => this.removeAllRolesFromItem(itemId))
-  //             .then(() => this.addNewRoleItem(itemId, groupId, newRoleId))
-  //         )
-  //       );
-  //     })
-  //     .then(() =>
-  //       alert(`Updated roles for all items with title '${nameItems}' success`)
-  //     )
-  //     .catch((error) =>
-  //       console.error(
-  //         `Error updating roles for items with title '${nameItems}':`,
-  //         error
-  //       )
-  //     );
-  // }
+    return this.countFiles(arrayFolderUrl)
+      .then(({ totalFiles, approvedFiles, percentFiles }) => {
+        console.log(`Total Files in ${subFolderName}: ${totalFiles}`);
+        console.log(`Approved Files in ${subFolderName}: ${approvedFiles}`);
+        console.log(`Completion rate: ${percentFiles}`);
+      })
+      .catch((error) => {
+        console.error("Error counting files:", error);
+      });
+  }
 
-  //Code mặc định----------------------------------------------------------------------------------------------------------------------------------------------
+  //Click đếm file
+  private onCountFiles(): Promise<any> {
+    return this.getFileFromSharePoint()
+      .then((folderPairs) => {
+        const folderMap = folderPairs.reduce(
+          (acc, { folderName, subFolderName }) => {
+            if (!acc[folderName]) {
+              acc[folderName] = [];
+            }
+            acc[folderName].push(subFolderName);
+            return acc;
+          },
+          {} as Record<string, string[]>
+        );
+
+        const loopFolder: Promise<any>[] = [];
+        for (const folderName in folderMap) {
+          if (folderMap.hasOwnProperty(folderName)) {
+            const subFolderNames = folderMap[folderName];
+            loopFolder.push(
+              Promise.all(
+                subFolderNames.map((subFolderName) =>
+                  this.getUrlCountFiles(folderName, subFolderName)
+                )
+              )
+            );
+          }
+        }
+
+        return Promise.all(loopFolder);
+      })
+      .catch((error) => {
+        console.error("Error processing folders and subfolders:", error);
+      });
+  }
+
+  //-------------------------------------------------------------------------------------------------------------------------------------------------------------
   private getEnvironmentMessage(): Promise<string> {
     if (!!this.context.sdks.microsoftTeams) {
       //running in Teams, office.com or Outlook
