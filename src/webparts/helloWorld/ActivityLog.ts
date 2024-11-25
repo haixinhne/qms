@@ -65,7 +65,9 @@ export const handleClick = (
               fileName,
               updatedJson
             );
-            displayJsonContent(spHttpClient, sharepointUrl, listName);
+            setTimeout(() => {
+              displayJsonContent(spHttpClient, sharepointUrl, listName);
+            }, 1000);
           });
       })
       .catch((error) => console.error("Error processing JSON file:", error));

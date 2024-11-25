@@ -177,6 +177,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     if (clickCountFiles) {
       clickCountFiles.addEventListener("click", () => {
         this.onCountFiles();
+        handleClick(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList,
+          "Count Files"
+        );
       });
     }
 
@@ -240,7 +246,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .catch((error) => {
         console.error("Error fetching file:", error);
-        throw error;
+        return Promise.reject(error);
       });
   }
 
@@ -846,8 +852,11 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         (sum, result) => sum + result.approved,
         0
       );
-      const percentFiles = totalFiles > 0 ? approvedFiles / totalFiles : 0;
-      console.log("Type of percentFiles:", typeof percentFiles);
+      const percentFiles =
+        totalFiles > 0
+          ? parseFloat((approvedFiles / totalFiles).toFixed(2))
+          : 0;
+
       return { totalFiles, approvedFiles, percentFiles };
     });
   }
@@ -927,7 +936,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           }
         }
 
-        // Wait for all update promises to finish
         return Promise.all(updatePromises);
       })
       .catch((error) => {
@@ -984,7 +992,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             .then((response) => {
               if (!response.ok) {
                 return response.text().then((text) => {
-                  throw new Error(
+                  Promise.reject(
                     `Failed to update Rate for item ${itemId}: ${
                       text || response.statusText
                     }`
@@ -1005,7 +1013,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .catch((error) => {
         console.error("Error updating Rate value:", error);
-        throw error;
+        return Promise.reject(error);
       });
   };
 
