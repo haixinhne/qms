@@ -847,6 +847,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         0
       );
       const percentFiles = totalFiles > 0 ? approvedFiles / totalFiles : 0;
+      console.log("Type of percentFiles:", typeof percentFiles);
       return { totalFiles, approvedFiles, percentFiles };
     });
   }
@@ -878,14 +879,15 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .then(({ totalFiles, approvedFiles, percentFiles }) => {
         console.log(`Total Files in ${subFolderName}: ${totalFiles}`);
         console.log(`Approved Files in ${subFolderName}: ${approvedFiles}`);
-        console.log(`Completion rate: ${percentFiles}`);
+        console.log(`Completion rate in ${subFolderName}: ${percentFiles}`);
+        return { totalFiles, approvedFiles, percentFiles };
       })
       .catch((error) => {
         console.error("Error counting files:", error);
       });
   }
 
-  //Click đếm file
+  // Click đếm file
   private onCountFiles(): Promise<any> {
     return this.getFileFromSharePoint()
       .then((folderPairs) => {
@@ -900,28 +902,114 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           {} as Record<string, string[]>
         );
 
-        const loopFolder: Promise<any>[] = [];
+        //Lưu trữ các promise
+        const updatePromises: Promise<any>[] = [];
+
+        //Lặp qua từng thư mục và các thư mục con
         for (const folderName in folderMap) {
           if (folderMap.hasOwnProperty(folderName)) {
             const subFolderNames = folderMap[folderName];
-            loopFolder.push(
-              Promise.all(
-                subFolderNames.map((subFolderName) =>
-                  this.getUrlCountFiles(folderName, subFolderName)
+
+            subFolderNames.forEach((subFolderName) => {
+              //Lấy giá trị của Rate
+              updatePromises.push(
+                this.getUrlCountFiles(folderName, subFolderName).then(
+                  ({ percentFiles }) => {
+                    //Chạy hàm cập nhật vào sharepoint list
+                    return this.updateRateSharepoint(
+                      subFolderName,
+                      percentFiles
+                    );
+                  }
                 )
-              )
-            );
+              );
+            });
           }
         }
 
-        return Promise.all(loopFolder);
+        // Wait for all update promises to finish
+        return Promise.all(updatePromises);
       })
       .catch((error) => {
         console.error("Error processing folders and subfolders:", error);
       });
   }
 
-  //-------------------------------------------------------------------------------------------------------------------------------------------------------------
+  //Cập nhật Rate cho từng dự án tương ứng với ProjectName
+  private updateRateSharepoint = (
+    subFolderName: string,
+    percentFiles: number
+  ): Promise<any> => {
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=ProjectName eq '${subFolderName}'&$select=ID,ProjectName`;
+
+    return this.context.spHttpClient
+      .get(requestUrl, SPHttpClient.configurations.v1)
+      .then((response: SPHttpClientResponse) => {
+        if (!response.ok) {
+          return Promise.reject("Failed to retrieve item for subFolderName");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.value && data.value.length > 0) {
+          const item = data.value[0];
+          const itemId = item.ID;
+          const rateValue = percentFiles.toString();
+
+          const updateData = {
+            __metadata: { type: `SP.Data.${nameSharepointList}ListItem` },
+            Rate: rateValue,
+          };
+
+          const body = JSON.stringify(updateData);
+
+          const optionsHTTP: ISPHttpClientOptions = {
+            headers: {
+              Accept: "application/json;odata=verbose",
+              "Content-Type": "application/json;odata=verbose",
+              "odata-version": "",
+              "If-Match": "*",
+              "X-HTTP-Method": "MERGE",
+            },
+            body: body,
+          };
+
+          //Cập nhật giá trị vào cột Rate trên Sharepoint list
+          return this.context.spHttpClient
+            .post(
+              `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})`,
+              SPHttpClient.configurations.v1,
+              optionsHTTP
+            )
+            .then((response) => {
+              if (!response.ok) {
+                return response.text().then((text) => {
+                  throw new Error(
+                    `Failed to update Rate for item ${itemId}: ${
+                      text || response.statusText
+                    }`
+                  );
+                });
+              }
+              if (response.status === 204) {
+                console.log(`Updated completion rate in ${subFolderName}`);
+                return {};
+              }
+              return response.json();
+            });
+        } else {
+          return Promise.reject(
+            `No item found for ProjectName: ${subFolderName}`
+          );
+        }
+      })
+      .catch((error) => {
+        console.error("Error updating Rate value:", error);
+        throw error;
+      });
+  };
+
+  //Defaults---------------------------------------------------------------------------------------------------------------------------------------------------------
   private getEnvironmentMessage(): Promise<string> {
     if (!!this.context.sdks.microsoftTeams) {
       //running in Teams, office.com or Outlook

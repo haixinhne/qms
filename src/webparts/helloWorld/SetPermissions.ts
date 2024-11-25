@@ -19,6 +19,31 @@ export const getIdGroup = (
     .catch((error) => console.error("Error fetching groups:", error));
 };
 
+//Lấy ID của item dựa trên tên giá trị ở cột Branch
+const getItemId = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  listName: string,
+  nameItems: string
+): Promise<number[]> => {
+  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${listName}')/items?$filter=Branch eq '${nameItems}'&$select=ID`;
+  return spHttpClient
+    .get(requestUrl, SPHttpClient.configurations.v1)
+    .then((response: SPHttpClientResponse) => {
+      if (!response.ok) {
+        return Promise.reject("Failed to retrieve item ID");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      if (data.value && data.value.length > 0) {
+        return data.value.map((item: { ID: number }) => item.ID);
+      } else {
+        return Promise.reject("Item not found");
+      }
+    });
+};
+
 //Hàm quản lý quyền
 export const manageRoles = (
   spHttpClient: SPHttpClient,
@@ -73,31 +98,6 @@ export const manageRoles = (
         error
       )
     );
-};
-
-//Lấy ID của item dựa trên tên giá trị ở cột Branch
-const getItemId = (
-  spHttpClient: SPHttpClient,
-  sharepointUrl: string,
-  listName: string,
-  nameItems: string
-): Promise<number[]> => {
-  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${listName}')/items?$filter=Branch eq '${nameItems}'&$select=ID`;
-  return spHttpClient
-    .get(requestUrl, SPHttpClient.configurations.v1)
-    .then((response: SPHttpClientResponse) => {
-      if (!response.ok) {
-        return Promise.reject("Failed to retrieve item ID");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      if (data.value && data.value.length > 0) {
-        return data.value.map((item: { ID: number }) => item.ID);
-      } else {
-        return Promise.reject("Item not found");
-      }
-    });
 };
 
 //Hàm gửi yêu cầu tới SharePoint
