@@ -177,6 +177,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     if (clickCountFiles) {
       clickCountFiles.addEventListener("click", () => {
         this.onCountFiles();
+        this.onCountFilesDocuments();
         handleClick(
           this.context.spHttpClient,
           sharepointUrl,
@@ -776,7 +777,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Click Tạo folder
+  //Click tạo folder
   private onCreateFolder(): Promise<any> {
     return this.getFileFromSharePoint()
       .then((folderPairs) => {
@@ -806,7 +807,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Đếm số lượng folder----------------------------------------------------------------------------------------------------------------------------------------
+  //Đếm số lượng folder, cập nhật lên sharepoint------------------------------------------------------------------------------------------------------------------------------------------
+  //Đếm
   private countFiles(folderUrls: string[]): Promise<{
     totalFiles: number;
     approvedFiles: number;
@@ -845,7 +847,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         });
     };
 
-    const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); //Lặp qua các thư mục và cộng dồn kết quả
+    const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); //Lặp qua các thư mục
     return Promise.all(loopFolders).then((results) => {
       const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
       const approvedFiles = results.reduce(
@@ -877,6 +879,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     subFolders.forEach((folder) => {
       const folderUrl = `${subFolderUrl}/${folder}`;
       arrayFolderUrl.push(folderUrl);
+
       const childFolders = this.childSubFolders[folder];
       childFolders.forEach((childFolder) => {
         const childFolderUrl = `${folderUrl}/${childFolder}`;
@@ -896,7 +899,70 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  // Click đếm file
+  //Update Rate cho từng dự án ứng với ProjectName
+  private updateRateSharepoint = (
+    subFolderName: string,
+    percentFiles: number
+  ): Promise<any> => {
+    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=ProjectName eq '${subFolderName}'&$select=ID,ProjectName`;
+
+    return this.context.spHttpClient
+      .get(requestUrl, SPHttpClient.configurations.v1)
+      .then((response: SPHttpClientResponse) => {
+        if (!response.ok) {
+          return Promise.reject(`Failed to retrieve item for ${subFolderName}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.value && data.value.length > 0) {
+          const item = data.value[0];
+          const itemId = item.ID;
+          const rateValue = percentFiles.toString();
+
+          const body = JSON.stringify({
+            __metadata: { type: `SP.Data.${nameSharepointList}ListItem` },
+            Rate: rateValue,
+          });
+
+          const optionsHTTP: ISPHttpClientOptions = {
+            headers: {
+              Accept: "application/json;odata=verbose",
+              "Content-Type": "application/json;odata=verbose",
+              "odata-version": "",
+              "If-Match": "*",
+              "X-HTTP-Method": "MERGE",
+            },
+            body: body,
+          };
+
+          return this.context.spHttpClient
+            .post(
+              `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})`,
+              SPHttpClient.configurations.v1,
+              optionsHTTP
+            )
+            .then((response) => {
+              if (!response.ok) {
+                return response.text().then((text) => {
+                  Promise.reject(
+                    `Failed to update Rate for item ${itemId}: ${response.statusText}`
+                  );
+                });
+              }
+            });
+        }
+        return Promise.reject(
+          `No item found for ProjectName: ${subFolderName}`
+        );
+      })
+      .catch((error) => {
+        console.error("Error updating Rate value:", error);
+        return Promise.reject(error);
+      });
+  };
+
+  //Click đếm file
   private onCountFiles(): Promise<any> {
     return this.getFileFromSharePoint()
       .then((folderPairs) => {
@@ -911,20 +977,16 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           {} as Record<string, string[]>
         );
 
-        //Lưu trữ các promise
         const updatePromises: Promise<any>[] = [];
 
-        //Lặp qua từng thư mục và các thư mục con
+        //Lặp qua thư mục và các thư mục con
         for (const folderName in folderMap) {
           if (folderMap.hasOwnProperty(folderName)) {
             const subFolderNames = folderMap[folderName];
-
             subFolderNames.forEach((subFolderName) => {
-              //Lấy giá trị của Rate
               updatePromises.push(
                 this.getUrlCountFiles(folderName, subFolderName).then(
                   ({ percentFiles }) => {
-                    //Chạy hàm cập nhật vào sharepoint list
                     return this.updateRateSharepoint(
                       subFolderName,
                       percentFiles
@@ -943,33 +1005,192 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Cập nhật Rate cho từng dự án tương ứng với ProjectName
-  private updateRateSharepoint = (
-    subFolderName: string,
-    percentFiles: number
-  ): Promise<any> => {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=ProjectName eq '${subFolderName}'&$select=ID,ProjectName`;
+  //Đếm folder, update lên Document--------------------------------------------------------------------------------------------------------------------------------
+  private countFilesDocument(folderUrls: string[]): Promise<{
+    totalFiles: number;
+    approvedFiles: number;
+    percentFiles: string;
+  }> {
+    const fetchFileCounts = (
+      countFolderUrl: string
+    ): Promise<{ total: number; approved: number }> => {
+      return this.context.spHttpClient
+        .get(
+          `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
+          SPHttpClient.configurations.v1
+        )
+        .then((response) => {
+          if (!response.ok) {
+            console.log(`HTTP error! Status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const files = data.value || [];
+          const total = files.length;
+
+          const approved = files.filter((file: any) => {
+            const fileNameWithoutExtension = file.Name.split(".")
+              .slice(0, -1)
+              .join(".");
+            return fileNameWithoutExtension.endsWith("Approved");
+          }).length;
+
+          return { total, approved };
+        })
+        .catch((error) => {
+          console.error(`Error fetching files from ${countFolderUrl}:`, error);
+          return { total: 0, approved: 0 };
+        });
+    };
+
+    const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); //Lặp qua các thư mục
+    return Promise.all(loopFolders).then((results) => {
+      const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
+      const approvedFiles = results.reduce(
+        (sum, result) => sum + result.approved,
+        0
+      );
+      const percentFiles =
+        totalFiles > 0 ? `${approvedFiles} / ${totalFiles}` : 0;
+
+      return { totalFiles, approvedFiles, percentFiles };
+    });
+  }
+
+  private getUrlCountFilesDocuments(
+    parentFolderName: string,
+    subFolderName: string | string[]
+  ): Promise<any> {
+    if (typeof subFolderName === "string") {
+      subFolderName = [subFolderName];
+    }
+
+    const subFolderUrl = `Shared Documents/PROJECT/${parentFolderName}/${subFolderName}`;
+    const subFolders = ["Promotion", "Design", "Build"];
+    const arrayFolderUrl: string[] = [];
+
+    subFolders.forEach((folder) => {
+      const folderUrl = `${subFolderUrl}/${folder}`;
+      arrayFolderUrl.push(folderUrl);
+
+      const childFolders = this.childSubFolders[folder];
+      childFolders.forEach((childFolder) => {
+        const childFolderUrl = `${folderUrl}/${childFolder}`;
+        arrayFolderUrl.push(childFolderUrl);
+      });
+    });
+
+    return this.countFilesDocument(arrayFolderUrl)
+      .then(({ totalFiles, approvedFiles, percentFiles }) => {
+        console.log(`Total Files in ${subFolderName}: ${totalFiles}`);
+        console.log(`Approved Files in ${subFolderName}: ${approvedFiles}`);
+        console.log(`Completion rate in ${subFolderName}: ${percentFiles}`);
+        return { totalFiles, approvedFiles, percentFiles };
+      })
+      .catch((error) => {
+        console.error("Error counting files:", error);
+      });
+  }
+
+  //Click để cập nhật giá trị Approved
+  private onCountFilesDocuments(): Promise<any> {
+    return this.getFileFromSharePoint()
+      .then((folderPairs) => {
+        const folderMap = folderPairs.reduce(
+          (acc, { folderName, subFolderName }) => {
+            if (!acc[folderName]) {
+              acc[folderName] = [];
+            }
+            acc[folderName].push(subFolderName);
+            return acc;
+          },
+          {} as Record<string, string[]>
+        );
+
+        const updatePromises: Promise<any>[] = [];
+
+        //Lặp qua thư mục và các thư mục con
+        for (const folderName in folderMap) {
+          if (folderMap.hasOwnProperty(folderName)) {
+            const subFolderNames = folderMap[folderName];
+            subFolderNames.forEach((subFolderName) => {
+              updatePromises.push(
+                this.getUrlCountFilesDocuments(folderName, subFolderName).then(
+                  ({ percentFiles }) => {
+                    return this.updateFolderApprovedDocuments(percentFiles);
+                  }
+                )
+              );
+            });
+          }
+        }
+
+        return Promise.all(updatePromises);
+      })
+      .catch((error) => {
+        console.error("Error processing folders and subfolders:", error);
+      });
+  }
+
+  //Update Rate cho thư mục
+  private updateFolderApprovedDocuments(approvedValue: string): Promise<any> {
+    const folderUrl =
+      "Shared Documents/PROJECT/Viet Nam-VN/VN-QMS/Promotion/Client Contract Review (CCR)";
+    const requestUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/getFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields`;
 
     return this.context.spHttpClient
       .get(requestUrl, SPHttpClient.configurations.v1)
       .then((response: SPHttpClientResponse) => {
         if (!response.ok) {
-          return Promise.reject("Failed to retrieve item for subFolderName");
+          return response.text().then((text) => {
+            console.error(`Error retrieving folder metadata: ${text}`);
+            return Promise.reject(
+              `Folder doesn't exist or no metadata found for folder: ${text}`
+            );
+          });
         }
         return response.json();
       })
       .then((data) => {
-        if (data.value && data.value.length > 0) {
-          const item = data.value[0];
-          const itemId = item.ID;
-          const rateValue = percentFiles.toString();
+        if (!data || !data.Id) {
+          const body = JSON.stringify({
+            __metadata: { type: "SP.Data.DocumentsItem" },
+            Approved: approvedValue,
+          });
 
-          const updateData = {
-            __metadata: { type: `SP.Data.${nameSharepointList}ListItem` },
-            Rate: rateValue,
+          const optionsHTTP: ISPHttpClientOptions = {
+            headers: {
+              Accept: "application/json;odata=verbose",
+              "Content-Type": "application/json;odata=verbose",
+              "odata-version": "",
+            },
+            body: body,
           };
 
-          const body = JSON.stringify(updateData);
+          return this.context.spHttpClient
+            .post(
+              `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Documents')/items`,
+              SPHttpClient.configurations.v1,
+              optionsHTTP
+            )
+            .then((createResponse) => {
+              if (!createResponse.ok) {
+                return createResponse.text().then((text) => {
+                  console.error(`Error creating folder item: ${text}`);
+                  return Promise.reject(
+                    `Failed to create item for folder: Response: ${text}`
+                  );
+                });
+              }
+            });
+        } else {
+          const listItemId = data.Id;
+
+          const body = JSON.stringify({
+            __metadata: { type: "SP.ListItem" },
+            Approved: approvedValue,
+          });
 
           const optionsHTTP: ISPHttpClientOptions = {
             headers: {
@@ -982,42 +1203,31 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             body: body,
           };
 
-          //Cập nhật giá trị vào cột Rate trên Sharepoint list
           return this.context.spHttpClient
             .post(
-              `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})`,
+              `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Documents')/items(${listItemId})`,
               SPHttpClient.configurations.v1,
               optionsHTTP
             )
-            .then((response) => {
-              if (!response.ok) {
-                return response.text().then((text) => {
-                  Promise.reject(
-                    `Failed to update Rate for item ${itemId}: ${
-                      text || response.statusText
-                    }`
+            .then((updateResponse) => {
+              if (!updateResponse.ok) {
+                return updateResponse.text().then((text) => {
+                  console.error(`Error updating Approved column: ${text}`);
+                  return Promise.reject(
+                    `Failed to update Approved column: ${updateResponse.statusText}. Response: ${text}`
                   );
                 });
               }
-              if (response.status === 204) {
-                console.log(`Updated completion rate in ${subFolderName}`);
-                return {};
-              }
-              return response.json();
             });
-        } else {
-          return Promise.reject(
-            `No item found for ProjectName: ${subFolderName}`
-          );
         }
       })
       .catch((error) => {
-        console.error("Error updating Rate value:", error);
+        console.error("Error updating Approved column:", error);
         return Promise.reject(error);
       });
-  };
+  }
 
-  //Defaults---------------------------------------------------------------------------------------------------------------------------------------------------------
+  //Defaults-------------------------------------------------------------------------------------------------------------------------------------------------------
   private getEnvironmentMessage(): Promise<string> {
     if (!!this.context.sdks.microsoftTeams) {
       //running in Teams, office.com or Outlook
