@@ -808,7 +808,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   }
 
   //Đếm số lượng folder, cập nhật lên sharepoint------------------------------------------------------------------------------------------------------------------------------------------
-  //Đếm
+  //Đếm file
   private countFiles(folderUrls: string[]): Promise<{
     totalFiles: number;
     approvedFiles: number;
@@ -979,7 +979,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
         const updatePromises: Promise<any>[] = [];
 
-        //Lặp qua thư mục và các thư mục con
         for (const folderName in folderMap) {
           if (folderMap.hasOwnProperty(folderName)) {
             const subFolderNames = folderMap[folderName];
@@ -1005,7 +1004,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Đếm folder, update lên Document--------------------------------------------------------------------------------------------------------------------------------
+  //Đếm files, update lên Document--------------------------------------------------------------------------------------------------------------------------------
   //Đếm files
   private countFilesDocument(folderUrls: string[]): Promise<{
     totalFiles: string;
@@ -1077,7 +1076,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const subFolderNames = Array.isArray(subFolderName)
       ? subFolderName
       : [subFolderName];
-    const subFolders = Object.keys(this.childSubFolders); // ["Promotion", "Design", "Build"]
+    const subFolders = Object.keys(this.childSubFolders);
     const updatePromises: Promise<void>[] = [];
 
     subFolders.forEach((folder) => {
@@ -1086,7 +1085,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
       childFolders.forEach((child) => {
         const childFolderUrl = `${baseFolderUrl}/${child}`;
-        // Đếm file trong thư mục này và cập nhật Approved
+        //Đếm file trong thư mục này và cập nhật Approved
         const countAndUpdate = this.countFilesDocument([childFolderUrl])
           .then(({ percentFiles }) => {
             console.log(`Updating folder: ${childFolderUrl}: ${percentFiles}`);
@@ -1096,10 +1095,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             );
           })
           .catch((error) => {
-            console.error(
-              `Error updating folder ${childFolderUrl} with Approved:`,
-              error
-            );
+            console.error(`Error updating folder ${childFolderUrl}:`, error);
           });
 
         updatePromises.push(countAndUpdate);
@@ -1111,44 +1107,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         `All updates for ${parentFolderName}/${subFolderNames} completed.`
       );
     });
-  }
-
-  //Click để cập nhật giá trị Approved
-  private onCountFilesDocuments(): Promise<void> {
-    return this.getFileFromSharePoint()
-      .then((folderPairs) => {
-        // Tạo một bản đồ parentFolderName -> subFolderNames
-        const folderMap = folderPairs.reduce<Record<string, string[]>>(
-          (acc, { folderName, subFolderName }) => {
-            acc[folderName] = acc[folderName] || [];
-            acc[folderName].push(subFolderName);
-            return acc;
-          },
-          {}
-        );
-
-        const updatePromises: Promise<void>[] = [];
-
-        // Lặp qua từng cặp parentFolderName và subFolderNames
-        for (const parentFolderName in folderMap) {
-          if (folderMap.hasOwnProperty(parentFolderName)) {
-            const subFolderNames = folderMap[parentFolderName];
-
-            subFolderNames.forEach((subFolderName) => {
-              updatePromises.push(
-                this.getUrlCountFilesDocuments(parentFolderName, subFolderName)
-              );
-            });
-          }
-        }
-
-        return Promise.all(updatePromises).then(() => {
-          console.log("All folders updated successfully.");
-        });
-      })
-      .catch((error) => {
-        console.error("Error processing folders and subfolders:", error);
-      });
   }
 
   //Update Rate cho thư mục
@@ -1195,6 +1153,41 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .catch((error) =>
         console.error("Error updating Approved column:", error)
       );
+  }
+
+  //Click đếm file và update giá trị cột Approved vào Documents
+  private onCountFilesDocuments(): Promise<void> {
+    return this.getFileFromSharePoint()
+      .then((folderPairs) => {
+        const folderMap = folderPairs.reduce<Record<string, string[]>>(
+          (acc, { folderName, subFolderName }) => {
+            acc[folderName] = acc[folderName] || [];
+            acc[folderName].push(subFolderName);
+            return acc;
+          },
+          {}
+        );
+
+        const updatePromises: Promise<void>[] = [];
+
+        for (const parentFolderName in folderMap) {
+          if (folderMap.hasOwnProperty(parentFolderName)) {
+            const subFolderNames = folderMap[parentFolderName];
+
+            subFolderNames.forEach((subFolderName) => {
+              updatePromises.push(
+                this.getUrlCountFilesDocuments(parentFolderName, subFolderName)
+              );
+            });
+          }
+        }
+        return Promise.all(updatePromises).then(() => {
+          console.log("All folders updated successfully.");
+        });
+      })
+      .catch((error) => {
+        console.error("Error processing folders and subfolders:", error);
+      });
   }
 
   //Defaults-------------------------------------------------------------------------------------------------------------------------------------------------------
