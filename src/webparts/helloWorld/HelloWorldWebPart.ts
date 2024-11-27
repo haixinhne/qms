@@ -1006,9 +1006,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   }
 
   //Đếm folder, update lên Document--------------------------------------------------------------------------------------------------------------------------------
+  //Đếm
   private countFilesDocument(folderUrls: string[]): Promise<{
-    totalFiles: number;
-    approvedFiles: number;
+    totalFiles: string;
+    approvedFiles: string;
     percentFiles: string;
   }> {
     const fetchFileCounts = (
@@ -1022,6 +1023,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         .then((response) => {
           if (!response.ok) {
             console.log(`HTTP error! Status: ${response.status}`);
+            return { total: 0, approved: 0 }; //Trả về giá trị defaults
           }
           return response.json();
         })
@@ -1040,24 +1042,43 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         })
         .catch((error) => {
           console.error(`Error fetching files from ${countFolderUrl}:`, error);
-          return { total: 0, approved: 0 };
+          return { total: 0, approved: 0 }; //Trả về giá trị defaults
         });
     };
 
-    const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); //Lặp qua các thư mục
-    return Promise.all(loopFolders).then((results) => {
-      const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
-      const approvedFiles = results.reduce(
-        (sum, result) => sum + result.approved,
-        0
-      );
-      const percentFiles =
-        totalFiles > 0 ? `${approvedFiles} / ${totalFiles}` : 0;
+    // Lặp qua tất cả URL thư mục
+    const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url));
+    return Promise.all(loopFolders)
+      .then((results) => {
+        // Tổng hợp kết quả
+        const totalFiles = results.reduce(
+          (sum, result) => sum + result.total,
+          0
+        );
+        const approvedFiles = results.reduce(
+          (sum, result) => sum + result.approved,
+          0
+        );
+        const percentFiles =
+          totalFiles > 0 ? `${approvedFiles}/${totalFiles}` : "0";
 
-      return { totalFiles, approvedFiles, percentFiles };
-    });
+        return {
+          totalFiles: totalFiles.toString(),
+          approvedFiles: approvedFiles.toString(),
+          percentFiles: percentFiles,
+        };
+      })
+      .catch((error) => {
+        console.error("Error processing folders:", error);
+        return {
+          totalFiles: "0",
+          approvedFiles: "0",
+          percentFiles: "0",
+        };
+      });
   }
 
+  //Lấy Url các thư mục
   private getUrlCountFilesDocuments(
     parentFolderName: string,
     subFolderName: string | string[]
@@ -1082,11 +1103,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     });
 
     return this.countFilesDocument(arrayFolderUrl)
-      .then(({ totalFiles, approvedFiles, percentFiles }) => {
-        console.log(`Total Files in ${subFolderName}: ${totalFiles}`);
-        console.log(`Approved Files in ${subFolderName}: ${approvedFiles}`);
-        console.log(`Completion rate in ${subFolderName}: ${percentFiles}`);
-        return { totalFiles, approvedFiles, percentFiles };
+      .then(({ percentFiles }) => {
+        //console.log(`Completion rate in ${arrayFolderUrl}: ${percentFiles}`);
+        return {
+          percentFiles,
+          folderUrl: subFolderUrl, // Trả về folderUrl gốc
+        };
       })
       .catch((error) => {
         console.error("Error counting files:", error);
@@ -1110,17 +1132,23 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
         const updatePromises: Promise<any>[] = [];
 
-        //Lặp qua thư mục và các thư mục con
-        for (const folderName in folderMap) {
-          if (folderMap.hasOwnProperty(folderName)) {
-            const subFolderNames = folderMap[folderName];
+        // Lặp qua thư mục và các thư mục con
+        for (const parentFolderName in folderMap) {
+          if (folderMap.hasOwnProperty(parentFolderName)) {
+            const subFolderNames = folderMap[parentFolderName];
             subFolderNames.forEach((subFolderName) => {
               updatePromises.push(
-                this.getUrlCountFilesDocuments(folderName, subFolderName).then(
-                  ({ percentFiles }) => {
-                    return this.updateFolderApprovedDocuments(percentFiles);
-                  }
-                )
+                this.getUrlCountFilesDocuments(
+                  parentFolderName,
+                  subFolderName
+                ).then(({ percentFiles, folderUrl }) => {
+                  // Gọi hàm updateFolderApprovedDocuments với hai tham số
+                  console.log(folderUrl);
+                  return this.updateFolderApprovedDocuments(
+                    percentFiles,
+                    folderUrl
+                  );
+                })
               );
             });
           }
@@ -1134,9 +1162,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   }
 
   //Update Rate cho thư mục
-  private updateFolderApprovedDocuments(approvedValue: string): Promise<any> {
-    const folderUrl =
-      "Shared Documents/PROJECT/Viet Nam-VN/VN-QMS/Promotion/Client Contract Review (CCR)";
+  private updateFolderApprovedDocuments(
+    approvedValue: string,
+    folderUrl: string
+  ): Promise<any> {
     const requestUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/getFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields`;
 
     return this.context.spHttpClient
@@ -1145,7 +1174,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         if (!response.ok) {
           return response.text().then((text) => {
             console.error(`Error retrieving folder metadata: ${text}`);
-            return Promise.reject(
+            throw new Error(
               `Folder doesn't exist or no metadata found for folder: ${text}`
             );
           });
@@ -1154,6 +1183,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .then((data) => {
         if (!data || !data.Id) {
+          // Nếu chưa có metadata, tạo mới
           const body = JSON.stringify({
             __metadata: { type: "SP.Data.DocumentsItem" },
             Approved: approvedValue,
@@ -1178,15 +1208,13 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               if (!createResponse.ok) {
                 return createResponse.text().then((text) => {
                   console.error(`Error creating folder item: ${text}`);
-                  return Promise.reject(
-                    `Failed to create item for folder: Response: ${text}`
-                  );
+                  throw new Error(`Failed to create item for folder: ${text}`);
                 });
               }
             });
         } else {
+          // Nếu đã tồn tại metadata, cập nhật
           const listItemId = data.Id;
-
           const body = JSON.stringify({
             __metadata: { type: "SP.ListItem" },
             Approved: approvedValue,
@@ -1213,9 +1241,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               if (!updateResponse.ok) {
                 return updateResponse.text().then((text) => {
                   console.error(`Error updating Approved column: ${text}`);
-                  return Promise.reject(
-                    `Failed to update Approved column: ${updateResponse.statusText}. Response: ${text}`
-                  );
+                  throw new Error(`Failed to update Approved column: ${text}`);
                 });
               }
             });
@@ -1223,7 +1249,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .catch((error) => {
         console.error("Error updating Approved column:", error);
-        return Promise.reject(error);
+        throw error;
       });
   }
 
