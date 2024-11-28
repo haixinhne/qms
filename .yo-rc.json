@@ -8,7 +8,7 @@
       "@microsoft/teams-js": "2.24.0"
     },
     "version": "1.20.0",
-    "libraryName": "qms-test",
+    "libraryName": "QMS",
     "libraryId": "932b2c41-0620-4397-a46b-292daa224902",
     "environment": "spo",
     "packageManager": "npm",

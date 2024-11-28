@@ -22,7 +22,7 @@
 }
 
 .qms_actions {
-  padding-left: 170px;
+  display: inline-block;
   height: 100px;
   color: gray;
   overflow: auto;
@@ -30,6 +30,10 @@
 
 .qms_actions::-webkit-scrollbar {
   display: none;
+}
+
+p {
+  text-align: start;
 }
 
 .list {
@@ -63,6 +67,7 @@
 }
 
 .helloWorld {
+  text-align: center;
   overflow: hidden;
   padding: 1em;
   color: "[theme:bodyText, default: #323130]";
