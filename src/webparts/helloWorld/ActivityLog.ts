@@ -22,7 +22,12 @@ export const handleClick = (
   buttonName: string
 ) => {
   getUserName(spHttpClient, sharepointUrl).then((userName) => {
-    const getTimestamp = new Date().toLocaleString();
+    const getTimestamp = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
     const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
     const folderUrl = `/sites/${listName}/Shared Documents/ActivityHistory`;
     const fileName = "activityLog.json";

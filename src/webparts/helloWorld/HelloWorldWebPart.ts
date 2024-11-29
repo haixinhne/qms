@@ -70,6 +70,11 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     <section class="${styles.helloWorld} ${
       !!this.context.sdks.microsoftTeams ? styles.teams : ""
     }">
+
+     <div class="${styles.welcome}">
+        <h3>Management Function</h3>
+     </div>
+
      <div class=${styles.qms_btn}>
      <button class="${
        styles.qms_button
@@ -279,6 +284,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .then((response: SPHttpClientResponse) => {
         if (response.ok) {
           console.log(`List '${listName}' exists.`);
+
           return true;
         } else {
           console.log(`List '${listName}' does not exist.`);
@@ -914,7 +920,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         if (data.value && data.value.length > 0) {
           const item = data.value[0];
           const itemId = item.ID;
-          const rateValue = percentFiles.toString();
+          const rateValue = percentFiles;
 
           const body = JSON.stringify({
             __metadata: { type: `SP.Data.${nameSharepointList}ListItem` },
@@ -1334,8 +1340,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           }
         }
         return Promise.all(updatePromises).then(() => {
-          console.log("All folders updated");
-          alert("All folders updated");
+          console.log("The number of files updated in Op1");
+          alert("The number of files updated in Op1");
         });
       })
       .catch((error) => {
@@ -1373,8 +1379,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           }
         }
         return Promise.all(updatePromises).then(() => {
-          console.log("All folders updated");
-          alert("All folders updated");
+          console.log("The number of files updated in Op2");
+          alert("The number of files updated in Op2");
         });
       })
       .catch((error) => {
