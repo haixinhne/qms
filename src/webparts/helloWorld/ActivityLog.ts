@@ -18,7 +18,7 @@ export const getUserName = (
 export const handleClick = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  listName: string,
+  siteName: string,
   buttonName: string
 ) => {
   getUserName(spHttpClient, sharepointUrl).then((userName) => {
@@ -29,7 +29,7 @@ export const handleClick = (
       hour12: true,
     });
     const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
-    const folderUrl = `/sites/${listName}/Shared Documents/ActivityHistory`;
+    const folderUrl = `/sites/${siteName}/Shared Documents/ActivityHistory`;
     const fileName = "activityLog.json";
     const fileUrl = `${sharepointUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
 
@@ -71,7 +71,7 @@ export const handleClick = (
               updatedJson
             );
             setTimeout(() => {
-              displayJsonContent(spHttpClient, sharepointUrl, listName);
+              displayJsonContent(spHttpClient, sharepointUrl, siteName);
             }, 1000);
           });
       })
@@ -83,9 +83,9 @@ export const handleClick = (
 export const displayJsonContent = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  listName: string
+  siteName: string
 ) => {
-  const folderUrl = `/sites/${listName}/Shared Documents/ActivityHistory`;
+  const folderUrl = `/sites/${siteName}/Shared Documents/ActivityHistory`;
   const fileName = "activityLog.json";
   const fileUrl = `${sharepointUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
 

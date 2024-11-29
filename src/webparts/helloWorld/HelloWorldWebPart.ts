@@ -18,7 +18,8 @@ import { __metadata } from "tslib";
 //Url file Excel
 const excelUrl = "/sites/QMS/Shared Documents/Book1.xlsx";
 const sharepointUrl = "https://iscapevn.sharepoint.com/sites/QMS";
-const nameSharepointList = "QMS";
+const nameSharepointSite = "QMS";
+const nameSharepointList = "PJList";
 
 export interface IHelloWorldWebPartProps {
   description: string;
@@ -118,7 +119,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         handleClick(
           this.context.spHttpClient,
           sharepointUrl,
-          nameSharepointList,
+          nameSharepointSite,
           "Create Sharepoint"
         );
       });
@@ -131,7 +132,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         handleClick(
           this.context.spHttpClient,
           sharepointUrl,
-          nameSharepointList,
+          nameSharepointSite,
           "Create Folder"
         );
       });
@@ -162,7 +163,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         handleClick(
           this.context.spHttpClient,
           sharepointUrl,
-          nameSharepointList,
+          nameSharepointSite,
           "Set Permissions"
         );
       });
@@ -177,7 +178,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         handleClick(
           this.context.spHttpClient,
           sharepointUrl,
-          nameSharepointList,
+          nameSharepointSite,
           "Count Files"
         );
       });
@@ -193,7 +194,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         displayJsonContent(
           this.context.spHttpClient,
           sharepointUrl,
-          nameSharepointList
+          nameSharepointSite
         );
       });
     });
@@ -923,7 +924,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           const rateValue = percentFiles;
 
           const body = JSON.stringify({
-            __metadata: { type: `SP.Data.${nameSharepointList}ListItem` },
+            __metadata: {
+              type: `SP.Data.${nameSharepointList}ListItem`,
+            },
             Rate: rateValue,
           });
 
