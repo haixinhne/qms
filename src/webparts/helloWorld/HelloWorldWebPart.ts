@@ -1,12 +1,11 @@
 import { Version } from "@microsoft/sp-core-library";
 import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import type { IReadonlyTheme } from "@microsoft/sp-component-base";
-import { escape } from "@microsoft/sp-lodash-subset";
 import styles from "./HelloWorldWebPart.module.scss";
 import * as strings from "HelloWorldWebPartStrings";
 import * as XLSX from "xlsx";
 import { getIdGroup, manageRoles } from "./SetPermissions";
-import { handleClick, getUserName } from "./ActivityLog";
+import { handleClick, getUserName, displayJsonContent } from "./ActivityLog";
 
 import {
   SPHttpClient,
@@ -35,7 +34,6 @@ export interface ISPList {
 }
 
 export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorldWebPartProps> {
-  private _environmentMessage: string = "";
   private childSubFolders: { [key: string]: string[] } = {
     Promotion: [
       "Basic project data",
@@ -72,14 +70,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     <section class="${styles.helloWorld} ${
       !!this.context.sdks.microsoftTeams ? styles.teams : ""
     }">
-
-     <div class="${styles.welcome}">
-        <h2>Hello, ${escape(this.context.pageContext.user.displayName)}</h2>
-       <div>${this._environmentMessage}</div>
-
-        </div>
-     </div>
-
      <div class=${styles.qms_btn}>
      <button class="${
        styles.qms_button
@@ -193,9 +183,14 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Hàm defaults--------------------------------------------------------------------------------------------------------------------------------------------------
   protected onInit(): Promise<any> {
-    return this.getEnvironmentMessage().then((message) => {
-      this._environmentMessage = message;
-      return getUserName(this.context.spHttpClient, sharepointUrl);
+    return this.getEnvironmentMessage().then(() => {
+      return getUserName(this.context.spHttpClient, sharepointUrl).then(() => {
+        displayJsonContent(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
+      });
     });
   }
 
