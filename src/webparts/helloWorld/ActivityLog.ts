@@ -29,8 +29,8 @@ export const handleClick = (
       hour12: true,
     });
     const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
-    const folderUrl = `/sites/${siteName}/Shared Documents/ActivityHistory`;
-    const fileName = "activityLog.json";
+    const folderUrl = `/sites/${siteName}/Folder/History`;
+    const fileName = "History.json";
     const fileUrl = `${sharepointUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
 
     return spHttpClient
@@ -85,8 +85,8 @@ export const displayJsonContent = (
   sharepointUrl: string,
   siteName: string
 ) => {
-  const folderUrl = `/sites/${siteName}/Shared Documents/ActivityHistory`;
-  const fileName = "activityLog.json";
+  const folderUrl = `/sites/${siteName}/Folder/History`;
+  const fileName = "History.json";
   const fileUrl = `${sharepointUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
 
   spHttpClient

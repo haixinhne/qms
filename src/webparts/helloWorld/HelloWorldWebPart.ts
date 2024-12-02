@@ -16,7 +16,7 @@ import {
 import { __metadata } from "tslib";
 
 //Url file Excel
-const excelUrl = "/sites/QMS/Shared Documents/Book1.xlsx";
+const excelUrl = "/sites/QMS/Folder/Book1.xlsx";
 const sharepointUrl = "https://iscapevn.sharepoint.com/sites/QMS";
 const nameSharepointSite = "QMS";
 const nameSharepointList = "PJList";
@@ -146,8 +146,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         const manageRolesValue = [
           { nameItems: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
           { nameItems: "Japan-JP", groupId: 26, newRoleId: 1073741826 },
-          { nameItems: "USA", groupId: 30, newRoleId: 1073741826 },
         ];
+
         manageRolesValue.forEach(({ nameItems, groupId, newRoleId }) => {
           manageRoles(
             this.context.spHttpClient,
@@ -690,12 +690,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         "odata-version": "",
       },
     };
-    const subFolderUrl = `Shared Documents/PROJECT/${parentFolderName}/${subFolderName}`;
+    const subFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderName}`;
     const subFolders = ["Promotion", "Design", "Build"];
     const arrayFolderUrl: string[] = [];
     return this.context.spHttpClient
       .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/PROJECT/${parentFolderName}/${subFolderName}')`,
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Folder/PROJECT/${parentFolderName}/${subFolderName}')`,
         SPHttpClient.configurations.v1,
         optionsHTTP
       )
@@ -733,10 +733,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .then(() => {
         console.log(
-          `Created subfolders ${subFolderName} in: Shared Documents/PROJECT/${parentFolderName}`
+          `Created subfolders ${subFolderName} in: Folder/PROJECT/${parentFolderName}`
         );
         alert(
-          `Created subfolders ${subFolderName} in: Shared Documents/PROJECT/${parentFolderName}`
+          `Created subfolders ${subFolderName} in: Folder/PROJECT/${parentFolderName}`
         );
       })
       .catch((error) => {
@@ -759,16 +759,14 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
     return this.context.spHttpClient
       .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Shared Documents/PROJECT/${folderName}')`,
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Folder/PROJECT/${folderName}')`,
         SPHttpClient.configurations.v1,
         optionsHTTP
       )
       .then((response: SPHttpClientResponse) => response.json())
       .then(() => {
-        console.log(
-          `Created folders ${folderName} in: Shared Documents/PROJECT`
-        );
-        alert(`Created folders ${folderName} in: Shared Documents/PROJECT`);
+        console.log(`Created folders ${folderName} in: Folder/PROJECT`);
+        alert(`Created folders ${folderName} in: Folder/PROJECT`);
         return Promise.all(
           subFolderNames.map((subFolderName) =>
             this.createSubfolder(folderName, subFolderName)
@@ -875,7 +873,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       subFolderName = [subFolderName];
     }
 
-    const subFolderUrl = `Shared Documents/PROJECT/${parentFolderName}/${subFolderName}`;
+    const subFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderName}`;
     const subFolders = ["Promotion", "Design", "Build"];
     const arrayFolderUrl: string[] = [];
 
@@ -1152,7 +1150,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const updatePromises: Promise<void>[] = [];
 
     subFolders.forEach((folder) => {
-      const baseFolderUrl = `Shared Documents/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
+      const baseFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
       const childFolders = this.childSubFolders[folder];
 
       childFolders.forEach((child) => {
@@ -1193,7 +1191,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const updatePromises: Promise<void>[] = [];
 
     subFolders.forEach((folder) => {
-      const baseFolderUrl = `Shared Documents/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
+      const baseFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
       const childFolders = this.childSubFolders[folder];
 
       childFolders.forEach((child) => {
@@ -1255,8 +1253,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         };
 
         const url = data.Id
-          ? `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Documents')/items(${data.Id})`
-          : `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Documents')/items`;
+          ? `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Folder')/items(${data.Id})`
+          : `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Folder')/items`;
 
         return this.context.spHttpClient.post(
           url,
@@ -1301,8 +1299,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         };
 
         const url = data.Id
-          ? `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Documents')/items(${data.Id})`
-          : `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Documents')/items`;
+          ? `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Folder')/items(${data.Id})`
+          : `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Folder')/items`;
 
         return this.context.spHttpClient.post(
           url,
@@ -1315,7 +1313,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       );
   }
 
-  //Click đếm file và update giá trị cột Approved vào Documents
+  //Click đếm file và update giá trị cột Approved vào Folder
   //Option1
   private onCountFilesDocuments(): Promise<void> {
     return this.getFileFromSharePoint()
