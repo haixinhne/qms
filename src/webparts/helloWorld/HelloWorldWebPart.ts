@@ -6,6 +6,12 @@ import * as strings from "HelloWorldWebPartStrings";
 import * as XLSX from "xlsx";
 import { getIdGroup, manageRoles } from "./SetPermissions";
 import { handleClick, getUserName, displayJsonContent } from "./ActivityLog";
+import {
+  childSubFolders,
+  onCountFiles,
+  onCountFilesFolders,
+  onCountFilesFoldersOption2,
+} from "./CountFiles";
 
 import {
   SPHttpClient,
@@ -35,37 +41,7 @@ export interface ISPList {
 }
 
 export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorldWebPartProps> {
-  private childSubFolders: { [key: string]: string[] } = {
-    Promotion: [
-      "Basic project data",
-      "Promotion activities",
-      "Reports",
-      "Project risk analysis",
-      "Stakeholder Management",
-      "Design Review 01 AS-ME",
-      "Client Contract Review (CCR)",
-      "Project Approval (EU-Kento)",
-      "Estimate Approval (EU-Kessai)",
-    ],
-    Design: [
-      "Drawings",
-      "Funtion Checklist AS",
-      "Funtion Checklist ME",
-      "Designer Approval Request",
-      "Design Review 23 AS-ME",
-    ],
-    Build: [
-      "Project outline",
-      "PM Policy",
-      "HSE risks (Health, Safely & Env.ment)",
-      "Funtion Checklist Update",
-      "Quality Plan",
-      "Schedule",
-      "Construction Kickoff",
-    ],
-  };
-
-  //DOM-------------------------------------------------------------------------------------------------------------------------------------------------------------
+  //DOM------------------------------------------------------------------------------------------------------------------------------------------
   public render(): void {
     this.domElement.innerHTML = `
     <section class="${styles.helloWorld} ${
@@ -91,8 +67,13 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
          <button class="${
            styles.qms_button
-         }" id="countFiles">Count Files</button>
+         }" id="countFiles_Op1">Count Files Op1</button>
+
+          <button class="${
+            styles.qms_button
+          }" id="countFiles_Op2">Count Files Op2</button>
          </div>
+
      <div class="${styles.qms_actions}" id= "qms_actions">
      <p id= "qms_desc"></p>
      </div>
@@ -104,14 +85,15 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const clickCreateFolder = this.domElement.querySelector("#createFolder");
     const setPermissions = this.domElement.querySelector("#setPermissions");
     const actionsContainer = this.domElement.querySelector("#qms_actions");
-    const clickCountFiles = this.domElement.querySelector("#countFiles");
+    const clickCountFilesOp1 = this.domElement.querySelector("#countFiles_Op1");
+    const clickCountFilesOp2 = this.domElement.querySelector("#countFiles_Op2");
 
     if (!actionsContainer) {
       console.error("The actionsContainer element was not found.");
       return;
     }
 
-    //Event click button------------------------------------------------------------------------------------------------------------------------------------------
+    //Event click button-------------------------------------------------------------------------------------------------------------------------
     //Tạo sharepoint
     if (clickCreateSharepoint) {
       clickCreateSharepoint.addEventListener("click", () => {
@@ -170,16 +152,44 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     }
 
     //Count files
-    if (clickCountFiles) {
-      clickCountFiles.addEventListener("click", () => {
-        this.onCountFiles();
-        this.onCountFilesDocuments();
-        this.onCountFilesDocumentsOption2();
+    if (clickCountFilesOp1) {
+      clickCountFilesOp1.addEventListener("click", () => {
+        onCountFiles(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
+        onCountFilesFolders(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
         handleClick(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
-          "Count Files"
+          "Count Files Option 1"
+        );
+      });
+    }
+
+    if (clickCountFilesOp2) {
+      clickCountFilesOp2.addEventListener("click", () => {
+        onCountFiles(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
+        onCountFilesFoldersOption2(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
+        handleClick(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointSite,
+          "Count Files Option 2"
         );
       });
     }
@@ -187,7 +197,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     this.renderListAsync();
   }
 
-  //Hàm defaults--------------------------------------------------------------------------------------------------------------------------------------------------
+  //Hàm defaults--------------------------------------------------------------------------------------------------------------------------------
   protected onInit(): Promise<any> {
     return this.getEnvironmentMessage().then(() => {
       return getUserName(this.context.spHttpClient, sharepointUrl).then(() => {
@@ -236,7 +246,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .catch(() => {});
   }
 
-  //Tạo sharepoint list từ excel, add, update, xóa items từ sharepoint--------------------------------------------------------------------------------------------
+  //Tạo sharepoint list từ excel, add, update, xóa items từ sharepoint---------------------------------------------------------------------------
   //Lấy file excel
   private getFileExcelFromSharePoint(excelUrl: string): Promise<ArrayBuffer> {
     return this.context.spHttpClient
@@ -643,7 +653,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Tạo các thư mục từ sharepoint------------------------------------------------------------------------------------------------------------------------------
+  //Tạo các thư mục từ sharepoint list-------------------------------------------------------------------------------------------------------------
   // Hàm lấy data từ sharepoint list (Lấy tên thư mục là 1 cột ở sharepoint list)
   private getFileFromSharePoint(): Promise<
     { folderName: string; subFolderName: string }[]
@@ -714,8 +724,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                 optionsHTTP
               )
               .then(() => {
-                // Tạo các thư mục con nhỏ hơn trong từng thư mục con
-                const childFolders = this.childSubFolders[folder];
+                // Tạo các thư mục con nhỏ hơn
+                const childFolders = childSubFolders[folder];
                 return childFolders.reduce((childPrevPromise, childFolder) => {
                   const childFolderUrl = `${folderUrl}/${childFolder}`;
                   arrayFolderUrl.push(childFolderUrl);
@@ -802,587 +812,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         }
 
         return Promise.all(loopCreateFolder);
-      })
-      .catch((error) => {
-        console.error("Error processing folders and subfolders:", error);
-      });
-  }
-
-  //Đếm số lượng folder, cập nhật lên sharepoint------------------------------------------------------------------------------------------------------------------------------------------
-  //Đếm file
-  private countFiles(folderUrls: string[]): Promise<{
-    totalFiles: number;
-    approvedFiles: number;
-    percentFiles: number;
-  }> {
-    const fetchFileCounts = (
-      countFolderUrl: string
-    ): Promise<{ total: number; approved: number }> => {
-      return this.context.spHttpClient
-        .get(
-          `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
-          SPHttpClient.configurations.v1
-        )
-        .then((response) => {
-          if (!response.ok) {
-            console.log(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
-          const files = data.value || [];
-          const total = files.length;
-
-          const approved = files.filter((file: any) => {
-            const fileNameWithoutExtension = file.Name.split(".")
-              .slice(0, -1)
-              .join(".");
-            return fileNameWithoutExtension.endsWith("Approved");
-          }).length;
-
-          return { total, approved };
-        })
-        .catch((error) => {
-          console.error(`Error fetching files from ${countFolderUrl}:`, error);
-          return { total: 0, approved: 0 };
-        });
-    };
-
-    const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); //Lặp qua các thư mục
-    return Promise.all(loopFolders).then((results) => {
-      const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
-      const approvedFiles = results.reduce(
-        (sum, result) => sum + result.approved,
-        0
-      );
-      const percentFiles =
-        totalFiles > 0
-          ? parseFloat((approvedFiles / totalFiles).toFixed(2))
-          : 0;
-
-      return { totalFiles, approvedFiles, percentFiles };
-    });
-  }
-
-  //Lấy Url các thư mục
-  private getUrlCountFiles(
-    parentFolderName: string,
-    subFolderName: string | string[]
-  ): Promise<any> {
-    if (typeof subFolderName === "string") {
-      subFolderName = [subFolderName];
-    }
-
-    const subFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderName}`;
-    const subFolders = ["Promotion", "Design", "Build"];
-    const arrayFolderUrl: string[] = [];
-
-    subFolders.forEach((folder) => {
-      const folderUrl = `${subFolderUrl}/${folder}`;
-      arrayFolderUrl.push(folderUrl);
-
-      const childFolders = this.childSubFolders[folder];
-      childFolders.forEach((childFolder) => {
-        const childFolderUrl = `${folderUrl}/${childFolder}`;
-        arrayFolderUrl.push(childFolderUrl);
-      });
-    });
-
-    return this.countFiles(arrayFolderUrl)
-      .then(({ totalFiles, approvedFiles, percentFiles }) => {
-        console.log(`Total Files in ${subFolderName}: ${totalFiles}`);
-        console.log(`Approved Files in ${subFolderName}: ${approvedFiles}`);
-        console.log(`Completion rate in ${subFolderName}: ${percentFiles}`);
-        return { totalFiles, approvedFiles, percentFiles };
-      })
-      .catch((error) => {
-        console.error("Error counting files:", error);
-      });
-  }
-
-  //Update Rate cho từng dự án ứng với ProjectName
-  private updateRateSharepoint = (
-    subFolderName: string,
-    percentFiles: number
-  ): Promise<any> => {
-    const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=ProjectName eq '${subFolderName}'&$select=ID,ProjectName`;
-
-    return this.context.spHttpClient
-      .get(requestUrl, SPHttpClient.configurations.v1)
-      .then((response: SPHttpClientResponse) => {
-        if (!response.ok) {
-          return Promise.reject(`Failed to retrieve item for ${subFolderName}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.value && data.value.length > 0) {
-          const item = data.value[0];
-          const itemId = item.ID;
-          const rateValue = percentFiles;
-
-          const body = JSON.stringify({
-            __metadata: {
-              type: `SP.Data.${nameSharepointList}ListItem`,
-            },
-            Rate: rateValue,
-          });
-
-          const optionsHTTP: ISPHttpClientOptions = {
-            headers: {
-              Accept: "application/json;odata=verbose",
-              "Content-Type": "application/json;odata=verbose",
-              "odata-version": "",
-              "If-Match": "*",
-              "X-HTTP-Method": "MERGE",
-            },
-            body: body,
-          };
-
-          return this.context.spHttpClient
-            .post(
-              `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})`,
-              SPHttpClient.configurations.v1,
-              optionsHTTP
-            )
-            .then((response) => {
-              if (!response.ok) {
-                return response.text().then((text) => {
-                  Promise.reject(
-                    `Failed to update Rate for item ${itemId}: ${response.statusText}`
-                  );
-                });
-              }
-            });
-        }
-        return Promise.reject(
-          `No item found for ProjectName: ${subFolderName}`
-        );
-      })
-      .catch((error) => {
-        console.error("Error updating Rate value:", error);
-        return Promise.reject(error);
-      });
-  };
-
-  //Click đếm file
-  private onCountFiles(): Promise<any> {
-    return this.getFileFromSharePoint()
-      .then((folderPairs) => {
-        const folderMap = folderPairs.reduce(
-          (acc, { folderName, subFolderName }) => {
-            if (!acc[folderName]) {
-              acc[folderName] = [];
-            }
-            acc[folderName].push(subFolderName);
-            return acc;
-          },
-          {} as Record<string, string[]>
-        );
-
-        const updatePromises: Promise<any>[] = [];
-
-        for (const folderName in folderMap) {
-          if (folderMap.hasOwnProperty(folderName)) {
-            const subFolderNames = folderMap[folderName];
-            subFolderNames.forEach((subFolderName) => {
-              updatePromises.push(
-                this.getUrlCountFiles(folderName, subFolderName).then(
-                  ({ percentFiles }) => {
-                    return this.updateRateSharepoint(
-                      subFolderName,
-                      percentFiles
-                    );
-                  }
-                )
-              );
-            });
-          }
-        }
-
-        return Promise.all(updatePromises);
-      })
-      .catch((error) => {
-        console.error("Error processing folders and subfolders:", error);
-      });
-  }
-
-  //Đếm files, update lên Document--------------------------------------------------------------------------------------------------------------------------------
-  //Đếm files
-  //Option1
-  private countFilesDocument(folderUrls: string[]): Promise<{
-    totalFiles: string;
-    approvedFiles: string;
-    percentFiles: string;
-  }> {
-    const fetchFileCounts = (
-      countFolderUrl: string
-    ): Promise<{ total: number; approved: number }> => {
-      return this.context.spHttpClient
-        .get(
-          `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
-          SPHttpClient.configurations.v1
-        )
-        .then((response) => {
-          if (!response.ok) {
-            console.warn(
-              `HTTP error! Status: ${response.status} for ${countFolderUrl}`
-            );
-            return { total: 0, approved: 0 };
-          }
-          return response.json();
-        })
-        .then((data) => {
-          const files = data.value || [];
-          const approved = files.filter((file: any) =>
-            file.Name.split(".").slice(0, -1).join(".").endsWith("Approved")
-          ).length;
-          return { total: files.length, approved };
-        })
-        .catch((error) => {
-          console.error(`Error fetching files from ${countFolderUrl}:`, error);
-          return { total: 0, approved: 0 };
-        });
-    };
-
-    return Promise.all(folderUrls.map(fetchFileCounts))
-      .then((results) => {
-        const { totalFiles, approvedFiles } = results.reduce(
-          (acc, result) => ({
-            totalFiles: acc.totalFiles + result.total,
-            approvedFiles: acc.approvedFiles + result.approved,
-          }),
-          { totalFiles: 0, approvedFiles: 0 }
-        );
-
-        return {
-          totalFiles: totalFiles.toString(),
-          approvedFiles: approvedFiles.toString(),
-          percentFiles:
-            totalFiles > 0 ? `${approvedFiles}/${totalFiles}` : "0/0",
-        };
-      })
-      .catch((error) => {
-        console.error("Error processing folders:", error);
-        return {
-          totalFiles: "0",
-          approvedFiles: "0",
-          percentFiles: "0/0",
-        };
-      });
-  }
-
-  //Option2
-  private countFilesDocumentOption2(folderUrls: string[]): Promise<{
-    totalFiles: number;
-    approvedFiles: number;
-    percentFiles: number;
-  }> {
-    const fetchFileCounts = (
-      countFolderUrl: string
-    ): Promise<{ total: number; approved: number }> => {
-      return this.context.spHttpClient
-        .get(
-          `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
-          SPHttpClient.configurations.v1
-        )
-        .then((response) => {
-          if (!response.ok) {
-            console.warn(
-              `HTTP error! Status: ${response.status} for ${countFolderUrl}`
-            );
-            return { total: 0, approved: 0 };
-          }
-          return response.json();
-        })
-        .then((data) => {
-          const files = data.value || [];
-          const approved = files.filter((file: any) =>
-            file.Name.split(".").slice(0, -1).join(".").endsWith("Approved")
-          ).length;
-          return { total: files.length, approved };
-        })
-        .catch((error) => {
-          console.error(`Error fetching files from ${countFolderUrl}:`, error);
-          return { total: 0, approved: 0 };
-        });
-    };
-
-    return Promise.all(folderUrls.map(fetchFileCounts))
-      .then((results) => {
-        const { totalFiles, approvedFiles } = results.reduce(
-          (acc, result) => ({
-            totalFiles: acc.totalFiles + result.total,
-            approvedFiles: acc.approvedFiles + result.approved,
-          }),
-          { totalFiles: 0, approvedFiles: 0 }
-        );
-
-        return {
-          totalFiles: totalFiles,
-          approvedFiles: approvedFiles,
-          percentFiles:
-            totalFiles > 0
-              ? parseFloat((approvedFiles / totalFiles).toFixed(2))
-              : 0,
-        };
-      })
-      .catch((error) => {
-        console.error("Error processing folders:", error);
-        return {
-          totalFiles: 0,
-          approvedFiles: 0,
-          percentFiles: 0,
-        };
-      });
-  }
-
-  //Lấy Url các thư mục
-  //Option1
-  private getUrlCountFilesDocuments(
-    parentFolderName: string,
-    subFolderName: string | string[]
-  ): Promise<void> {
-    const subFolderNames = Array.isArray(subFolderName)
-      ? subFolderName
-      : [subFolderName];
-    const subFolders = Object.keys(this.childSubFolders);
-    const updatePromises: Promise<void>[] = [];
-
-    subFolders.forEach((folder) => {
-      const baseFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
-      const childFolders = this.childSubFolders[folder];
-
-      childFolders.forEach((child) => {
-        const childFolderUrl = `${baseFolderUrl}/${child}`;
-        //Đếm file trong thư mục này và cập nhật Approved
-        const countAndUpdate = this.countFilesDocument([childFolderUrl])
-          .then(({ percentFiles }) => {
-            console.log(`Updating folder: ${childFolderUrl}: ${percentFiles}`);
-            return this.updateFolderApprovedDocuments(
-              percentFiles,
-              childFolderUrl
-            );
-          })
-          .catch((error) => {
-            console.error(`Error updating folder ${childFolderUrl}:`, error);
-          });
-
-        updatePromises.push(countAndUpdate);
-      });
-    });
-
-    return Promise.all(updatePromises).then(() => {
-      console.log(
-        `All updates for ${parentFolderName}/${subFolderNames} completed`
-      );
-    });
-  }
-
-  //Option2
-  private getUrlCountFilesDocumentsOption2(
-    parentFolderName: string,
-    subFolderName: string | string[]
-  ): Promise<void> {
-    const subFolderNames = Array.isArray(subFolderName)
-      ? subFolderName
-      : [subFolderName];
-    const subFolders = Object.keys(this.childSubFolders);
-    const updatePromises: Promise<void>[] = [];
-
-    subFolders.forEach((folder) => {
-      const baseFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
-      const childFolders = this.childSubFolders[folder];
-
-      childFolders.forEach((child) => {
-        const childFolderUrl = `${baseFolderUrl}/${child}`;
-        //Đếm file trong thư mục này và cập nhật Approved
-        const countAndUpdate = this.countFilesDocumentOption2([childFolderUrl])
-          .then(({ percentFiles }) => {
-            console.log(`Updating folder: ${childFolderUrl}: ${percentFiles}`);
-            return this.updateFolderApprovedDocumentsOption2(
-              percentFiles,
-              childFolderUrl
-            );
-          })
-          .catch((error) => {
-            console.error(`Error updating folder ${childFolderUrl}:`, error);
-          });
-
-        updatePromises.push(countAndUpdate);
-      });
-    });
-
-    return Promise.all(updatePromises).then(() => {
-      console.log(
-        `All updates for ${parentFolderName}/${subFolderNames} completed`
-      );
-    });
-  }
-
-  //Update Rate cho thư mục
-  //Option1
-  private updateFolderApprovedDocuments(
-    approvedValue: string,
-    folderUrl: string
-  ): Promise<any> {
-    const requestUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/getFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields`;
-
-    return this.context.spHttpClient
-      .get(requestUrl, SPHttpClient.configurations.v1)
-      .then((response) =>
-        response.ok
-          ? response.json()
-          : Promise.reject("Folder metadata not found")
-      )
-      .then((data) => {
-        const body = JSON.stringify({
-          __metadata: { type: "SP.ListItem" },
-          ProgressOp1: approvedValue,
-        });
-
-        const optionsHTTP: ISPHttpClientOptions = {
-          headers: {
-            Accept: "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose",
-            "odata-version": "",
-            "If-Match": "*",
-            "X-HTTP-Method": data.Id ? "MERGE" : "POST",
-          },
-          body,
-        };
-
-        const url = data.Id
-          ? `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Folder')/items(${data.Id})`
-          : `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Folder')/items`;
-
-        return this.context.spHttpClient.post(
-          url,
-          SPHttpClient.configurations.v1,
-          optionsHTTP
-        );
-      })
-      .catch((error) =>
-        console.error("Error updating Approved column:", error)
-      );
-  }
-
-  //Option2
-  private updateFolderApprovedDocumentsOption2(
-    approvedValue: number,
-    folderUrl: string
-  ): Promise<any> {
-    const requestUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/getFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields`;
-
-    return this.context.spHttpClient
-      .get(requestUrl, SPHttpClient.configurations.v1)
-      .then((response) =>
-        response.ok
-          ? response.json()
-          : Promise.reject("Folder metadata not found")
-      )
-      .then((data) => {
-        const body = JSON.stringify({
-          __metadata: { type: "SP.ListItem" },
-          ProgressOp2: approvedValue,
-        });
-
-        const optionsHTTP: ISPHttpClientOptions = {
-          headers: {
-            Accept: "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose",
-            "odata-version": "",
-            "If-Match": "*",
-            "X-HTTP-Method": data.Id ? "MERGE" : "POST",
-          },
-          body,
-        };
-
-        const url = data.Id
-          ? `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Folder')/items(${data.Id})`
-          : `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/getByTitle('Folder')/items`;
-
-        return this.context.spHttpClient.post(
-          url,
-          SPHttpClient.configurations.v1,
-          optionsHTTP
-        );
-      })
-      .catch((error) =>
-        console.error("Error updating Approved column:", error)
-      );
-  }
-
-  //Click đếm file và update giá trị cột Approved vào Folder
-  //Option1
-  private onCountFilesDocuments(): Promise<void> {
-    return this.getFileFromSharePoint()
-      .then((folderPairs) => {
-        const folderMap = folderPairs.reduce<Record<string, string[]>>(
-          (acc, { folderName, subFolderName }) => {
-            acc[folderName] = acc[folderName] || [];
-            acc[folderName].push(subFolderName);
-            return acc;
-          },
-          {}
-        );
-
-        const updatePromises: Promise<void>[] = [];
-
-        for (const parentFolderName in folderMap) {
-          if (folderMap.hasOwnProperty(parentFolderName)) {
-            const subFolderNames = folderMap[parentFolderName];
-
-            subFolderNames.forEach((subFolderName) => {
-              updatePromises.push(
-                this.getUrlCountFilesDocuments(parentFolderName, subFolderName)
-              );
-            });
-          }
-        }
-        return Promise.all(updatePromises).then(() => {
-          console.log("The number of files updated in Op1");
-          alert("The number of files updated in Op1");
-        });
-      })
-      .catch((error) => {
-        console.error("Error processing folders and subfolders:", error);
-      });
-  }
-
-  //Option2
-  private onCountFilesDocumentsOption2(): Promise<void> {
-    return this.getFileFromSharePoint()
-      .then((folderPairs) => {
-        const folderMap = folderPairs.reduce<Record<string, string[]>>(
-          (acc, { folderName, subFolderName }) => {
-            acc[folderName] = acc[folderName] || [];
-            acc[folderName].push(subFolderName);
-            return acc;
-          },
-          {}
-        );
-
-        const updatePromises: Promise<void>[] = [];
-
-        for (const parentFolderName in folderMap) {
-          if (folderMap.hasOwnProperty(parentFolderName)) {
-            const subFolderNames = folderMap[parentFolderName];
-
-            subFolderNames.forEach((subFolderName) => {
-              updatePromises.push(
-                this.getUrlCountFilesDocumentsOption2(
-                  parentFolderName,
-                  subFolderName
-                )
-              );
-            });
-          }
-        }
-        return Promise.all(updatePromises).then(() => {
-          console.log("The number of files updated in Op2");
-          alert("The number of files updated in Op2");
-        });
       })
       .catch((error) => {
         console.error("Error processing folders and subfolders:", error);

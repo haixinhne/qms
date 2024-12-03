@@ -23,10 +23,10 @@ export const getIdGroup = (
 const getItemId = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  listName: string,
+  nameSharepointList: string,
   nameItems: string
 ): Promise<number[]> => {
-  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${listName}')/items?$filter=Branch eq '${nameItems}'&$select=ID`;
+  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=Branch eq '${nameItems}'&$select=ID`;
   return spHttpClient
     .get(requestUrl, SPHttpClient.configurations.v1)
     .then((response: SPHttpClientResponse) => {
@@ -48,20 +48,20 @@ const getItemId = (
 export const manageRoles = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  listName: string,
+  nameSharepointList: string,
   nameItems: string,
   groupId: number,
   newRoleId: number,
   formDigestValue: string
 ): Promise<void> => {
-  return getItemId(spHttpClient, sharepointUrl, listName, nameItems)
+  return getItemId(spHttpClient, sharepointUrl, nameSharepointList, nameItems)
     .then((itemIds: number[]) => {
       return Promise.all(
         itemIds.map((itemId) =>
           breakRoleInheritanceItem(
             spHttpClient,
             sharepointUrl,
-            listName,
+            nameSharepointList,
             itemId,
             formDigestValue
           )
@@ -69,7 +69,7 @@ export const manageRoles = (
               removeAllRolesFromItem(
                 spHttpClient,
                 sharepointUrl,
-                listName,
+                nameSharepointList,
                 itemId,
                 formDigestValue
               )
@@ -78,7 +78,7 @@ export const manageRoles = (
               addNewRoleItem(
                 spHttpClient,
                 sharepointUrl,
-                listName,
+                nameSharepointList,
                 itemId,
                 groupId,
                 newRoleId,
@@ -131,11 +131,11 @@ const executeRequest = (
 const breakRoleInheritanceItem = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  listName: string,
+  nameSharepointList: string,
   itemId: number,
   formDigestValue: string
 ): Promise<number> => {
-  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${listName}')/items(${itemId})/breakroleinheritance(true)`;
+  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/breakroleinheritance(true)`;
   return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue).then(
     () => {
       console.log(`Break role inheritance for item ID: ${itemId}`);
@@ -148,12 +148,12 @@ const breakRoleInheritanceItem = (
 const removeCurrentRoleFromItem = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  listName: string,
+  nameSharepointList: string,
   itemId: number,
   groupId: number,
   formDigestValue: string
 ): Promise<number> => {
-  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${listName}')/items(${itemId})/roleassignments/removeroleassignment(principalid=${groupId})`;
+  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/roleassignments/removeroleassignment(principalid=${groupId})`;
   return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue).then(
     () => {
       console.log(`Remove the current group role from item ID: ${itemId}`);
@@ -166,11 +166,11 @@ const removeCurrentRoleFromItem = (
 const removeAllRolesFromItem = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  listName: string,
+  nameSharepointList: string,
   itemId: number,
   formDigestValue: string
 ): Promise<number> => {
-  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${listName}')/items(${itemId})/roleassignments`;
+  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/roleassignments`;
   return spHttpClient
     .get(requestUrl, SPHttpClient.configurations.v1)
     .then((response: SPHttpClientResponse) => {
@@ -185,7 +185,7 @@ const removeAllRolesFromItem = (
         removeCurrentRoleFromItem(
           spHttpClient,
           sharepointUrl,
-          listName,
+          nameSharepointList,
           itemId,
           roleAssignment.PrincipalId,
           formDigestValue
@@ -199,12 +199,12 @@ const removeAllRolesFromItem = (
 const addNewRoleItem = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  listName: string,
+  nameSharepointList: string,
   itemId: number,
   groupId: number,
   roleId: number,
   formDigestValue: string
 ): Promise<void> => {
-  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${listName}')/items(${itemId})/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
+  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
   return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue);
 };

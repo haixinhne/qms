@@ -18,7 +18,7 @@ export const getUserName = (
 export const handleClick = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  siteName: string,
+  nameSharepointSite: string,
   buttonName: string
 ) => {
   getUserName(spHttpClient, sharepointUrl).then((userName) => {
@@ -29,18 +29,21 @@ export const handleClick = (
       hour12: true,
     });
     const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
-    const folderUrl = `/sites/${siteName}/Folder/History`;
-    const fileName = "History.json";
-    const fileUrl = `${sharepointUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
+    const folderUrl = `/sites/${nameSharepointSite}/Folder/Activity log`;
+    const fileName = "Activity_log.json";
 
     return spHttpClient
-      .get(fileUrl, SPHttpClient.configurations.v1, {
-        headers: {
-          Accept: "application/json;odata=verbose",
-          "Content-Type": "application/json;odata=verbose",
-          "odata-version": "",
-        },
-      })
+      .get(
+        `${sharepointUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`,
+        SPHttpClient.configurations.v1,
+        {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "odata-version": "",
+          },
+        }
+      )
       .then((response) => {
         if (response.ok) {
           return response.text();
@@ -71,7 +74,11 @@ export const handleClick = (
               updatedJson
             );
             setTimeout(() => {
-              displayJsonContent(spHttpClient, sharepointUrl, siteName);
+              displayJsonContent(
+                spHttpClient,
+                sharepointUrl,
+                nameSharepointSite
+              );
             }, 1000);
           });
       })
@@ -83,20 +90,23 @@ export const handleClick = (
 export const displayJsonContent = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  siteName: string
+  nameSharepointSite: string
 ) => {
-  const folderUrl = `/sites/${siteName}/Folder/History`;
-  const fileName = "History.json";
-  const fileUrl = `${sharepointUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`;
+  const folderUrl = `/sites/${nameSharepointSite}/Folder/Activity log`;
+  const fileName = "Activity_log.json";
 
   spHttpClient
-    .get(fileUrl, SPHttpClient.configurations.v1, {
-      headers: {
-        Accept: "application/json;odata=verbose",
-        "Content-Type": "application/json;odata=verbose",
-        "odata-version": "",
-      },
-    })
+    .get(
+      `${sharepointUrl}/_api/web/GetFileByServerRelativeUrl('${folderUrl}/${fileName}')/$value`,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          Accept: "application/json;odata=verbose",
+          "Content-Type": "application/json;odata=verbose",
+          "odata-version": "",
+        },
+      }
+    )
     .then((response) => {
       if (response.ok) {
         return response.text();
