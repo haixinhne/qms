@@ -50,9 +50,10 @@ const getFileFromSharePoint = (
     })
     .then((data) => {
       const folderValues = data.value
-        .filter((item: any) => item.Branch && item.ProjectName)
+        //Tên folder cha = tên cột Nation, con = tên cột ProjectName
+        .filter((item: any) => item.Nation && item.ProjectName)
         .map((item: any) => ({
-          folderName: item.Branch,
+          folderName: item.Nation,
           subFolderName: item.ProjectName,
         }))
         .filter(
@@ -218,12 +219,15 @@ const updateRateSharepoint = (
           )
           .then((response) => {
             if (!response.ok) {
-              return response.text().then((text) => {
+              return response.text().then(() => {
                 Promise.reject(
                   `Failed to update Rate for item ${itemId}: ${response.statusText}`
                 );
               });
             }
+            console.log(
+              `All items updated completion rate in ${nameSharepointList}`
+            );
           });
       }
       return Promise.reject(`No item found for ProjectName: ${subFolderName}`);

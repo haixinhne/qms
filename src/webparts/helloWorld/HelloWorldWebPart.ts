@@ -599,7 +599,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
       //Tạo items, update items
       .then(({ nameColumnSharepoint, nameItems }) => {
-        console.log("Input data", nameItems);
+        console.log("Input data from Excel:", nameItems);
 
         return nameItems
           .reduce((promise, itemData) => {
@@ -655,21 +655,23 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Tạo các thư mục từ sharepoint list-------------------------------------------------------------------------------------------------------------
   // Hàm lấy data từ sharepoint list (Lấy tên thư mục là 1 cột ở sharepoint list)
-  private getFileFromSharePoint(): Promise<
+  private getDataFromSharePointList(): Promise<
     { folderName: string; subFolderName: string }[]
   > {
-    const listUrl = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items`;
-
     return this.context.spHttpClient
-      .get(listUrl, SPHttpClient.configurations.v1)
+      .get(
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items`,
+        SPHttpClient.configurations.v1
+      )
       .then((response: SPHttpClientResponse) => {
         return response.json();
       })
       .then((data) => {
         const folderValues = data.value
-          .filter((item: any) => item.Branch && item.ProjectName)
+          //Tên folder cha = tên cột Nation, con = tên cột ProjectName
+          .filter((item: any) => item.Nation && item.ProjectName)
           .map((item: any) => ({
-            folderName: item.Branch,
+            folderName: item.Nation,
             subFolderName: item.ProjectName,
           }))
           .filter(
@@ -680,6 +682,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                   i.subFolderName === name.subFolderName
               ) === index
           );
+        console.log("Input data from Sharepoint list:", folderValues);
 
         return folderValues;
       })
@@ -790,7 +793,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Click tạo folder
   private onCreateFolder(): Promise<any> {
-    return this.getFileFromSharePoint()
+    return this.getDataFromSharePointList()
       .then((folderPairs) => {
         const folderMap = folderPairs.reduce((acc, pair) => {
           if (!acc[pair.folderName]) {

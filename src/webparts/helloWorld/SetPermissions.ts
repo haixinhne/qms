@@ -19,14 +19,15 @@ export const getIdGroup = (
     .catch((error) => console.error("Error fetching groups:", error));
 };
 
-//Lấy ID của item dựa trên tên giá trị ở cột Branch
+//Set permissions cho item-sharepoint list-------------------------------------------------------------------------------------------------------
+//Lấy ID của item dựa vào giá trị ở cột Nation
 const getItemId = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string,
   nameItems: string
 ): Promise<number[]> => {
-  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=Branch eq '${nameItems}'&$select=ID`;
+  const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=Nation eq '${nameItems}'&$select=ID`;
   return spHttpClient
     .get(requestUrl, SPHttpClient.configurations.v1)
     .then((response: SPHttpClientResponse) => {
