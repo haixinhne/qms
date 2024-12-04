@@ -36,7 +36,7 @@ export const childSubFolders: { [key: string]: string[] } = {
 };
 
 //Đọc sharepoint list
-const getFileFromSharePoint = (
+const getDataFromSharepointList = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string
@@ -141,7 +141,7 @@ const getUrlCountFiles = (
     subFolderName = [subFolderName];
   }
 
-  const subFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderName}`;
+  const subFolderUrl = `ProjectFolder/PROJECT/${parentFolderName}/${subFolderName}`;
   const subFolders = ["Promotion", "Design", "Build"];
   const arrayFolderUrl: string[] = [];
 
@@ -244,7 +244,11 @@ export const onCountFiles = (
   sharepointUrl: string,
   nameSharepointList: string
 ): Promise<any> => {
-  return getFileFromSharePoint(spHttpClient, sharepointUrl, nameSharepointList)
+  return getDataFromSharepointList(
+    spHttpClient,
+    sharepointUrl,
+    nameSharepointList
+  )
     .then((folderPairs) => {
       const folderMap = folderPairs.reduce(
         (acc, { folderName, subFolderName }) => {
@@ -442,7 +446,7 @@ const getUrlCountFilesFolders = (
   const updatePromises: Promise<void>[] = [];
 
   subFolders.forEach((folder) => {
-    const baseFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
+    const baseFolderUrl = `ProjectFolder/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
     const childFolders = childSubFolders[folder];
 
     childFolders.forEach((child) => {
@@ -489,7 +493,7 @@ const getUrlCountFilesFoldersOption2 = (
   const updatePromises: Promise<void>[] = [];
 
   subFolders.forEach((folder) => {
-    const baseFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
+    const baseFolderUrl = `ProjectFolder/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
     const childFolders = childSubFolders[folder];
 
     childFolders.forEach((child) => {
@@ -564,8 +568,8 @@ const updateFolderApprovedFolders = (
       };
 
       const url = data.Id
-        ? `${sharepointUrl}/_api/web/lists/getByTitle('Folder')/items(${data.Id})`
-        : `${sharepointUrl}/_api/web/lists/getByTitle('Folder')/items`;
+        ? `${sharepointUrl}/_api/web/lists/getByTitle('ProjectFolder')/items(${data.Id})`
+        : `${sharepointUrl}/_api/web/lists/getByTitle('ProjectFolder')/items`;
 
       return spHttpClient.post(
         url,
@@ -614,8 +618,8 @@ const updateFolderApprovedFoldersOption2 = (
       };
 
       const url = data.Id
-        ? `${sharepointUrl}/_api/web/lists/getByTitle('Folder')/items(${data.Id})`
-        : `${sharepointUrl}/_api/web/lists/getByTitle('Folder')/items`;
+        ? `${sharepointUrl}/_api/web/lists/getByTitle('ProjectFolder')/items(${data.Id})`
+        : `${sharepointUrl}/_api/web/lists/getByTitle('ProjectFolder')/items`;
 
       return spHttpClient.post(
         url,
@@ -633,7 +637,11 @@ export const onCountFilesFolders = (
   sharepointUrl: string,
   nameSharepointList: string
 ): Promise<void> => {
-  return getFileFromSharePoint(spHttpClient, sharepointUrl, nameSharepointList)
+  return getDataFromSharepointList(
+    spHttpClient,
+    sharepointUrl,
+    nameSharepointList
+  )
     .then((folderPairs) => {
       const folderMap = folderPairs.reduce<Record<string, string[]>>(
         (acc, { folderName, subFolderName }) => {
@@ -678,7 +686,11 @@ export const onCountFilesFoldersOption2 = (
   sharepointUrl: string,
   nameSharepointList: string
 ): Promise<void> => {
-  return getFileFromSharePoint(spHttpClient, sharepointUrl, nameSharepointList)
+  return getDataFromSharepointList(
+    spHttpClient,
+    sharepointUrl,
+    nameSharepointList
+  )
     .then((folderPairs) => {
       const folderMap = folderPairs.reduce<Record<string, string[]>>(
         (acc, { folderName, subFolderName }) => {

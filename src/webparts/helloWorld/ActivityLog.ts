@@ -29,7 +29,7 @@ export const handleClick = (
       hour12: true,
     });
     const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
-    const folderUrl = `/sites/${nameSharepointSite}/Folder/Activity log`;
+    const folderUrl = `/sites/${nameSharepointSite}/ProjectFolder/ADMIN/Activity log`;
     const fileName = "Activity_log.json";
 
     return spHttpClient
@@ -92,7 +92,7 @@ export const displayJsonContent = (
   sharepointUrl: string,
   nameSharepointSite: string
 ) => {
-  const folderUrl = `/sites/${nameSharepointSite}/Folder/Activity log`;
+  const folderUrl = `/sites/${nameSharepointSite}/ProjectFolder/ADMIN/Activity log`;
   const fileName = "Activity_log.json";
 
   spHttpClient

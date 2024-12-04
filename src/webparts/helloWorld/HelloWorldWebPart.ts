@@ -4,7 +4,7 @@ import type { IReadonlyTheme } from "@microsoft/sp-component-base";
 import styles from "./HelloWorldWebPart.module.scss";
 import * as strings from "HelloWorldWebPartStrings";
 import * as XLSX from "xlsx";
-import { getIdGroup, manageRoles } from "./SetPermissions";
+import { getIdGroup, manageRoles, manageRolesFolder } from "./SetPermissions";
 import { handleClick, getUserName, displayJsonContent } from "./ActivityLog";
 import {
   childSubFolders,
@@ -22,10 +22,10 @@ import {
 import { __metadata } from "tslib";
 
 //Url file Excel
-const excelUrl = "/sites/QMS/Folder/Book1.xlsx";
+const excelUrl = "/sites/QMS/ProjectFolder/ADMIN/Book1.xlsx";
 const sharepointUrl = "https://iscapevn.sharepoint.com/sites/QMS";
 const nameSharepointSite = "QMS";
-const nameSharepointList = "PJList";
+const nameSharepointList = "ProjectList";
 
 export interface IHelloWorldWebPartProps {
   description: string;
@@ -63,7 +63,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
          <button class="${
            styles.qms_button
-         }" id="setPermissions">Set Permissions</button>
+         }" id="setPermissionsFolder">Set Permissions Folder</button>
+
+         <button class="${
+           styles.qms_button
+         }" id="setPermissionsSharepointList">Set Permissions Sharepoint</button>
+
 
          <button class="${
            styles.qms_button
@@ -83,7 +88,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       "#createSharepointList"
     );
     const clickCreateFolder = this.domElement.querySelector("#createFolder");
-    const setPermissions = this.domElement.querySelector("#setPermissions");
+    const setPermissionsFolder = this.domElement.querySelector(
+      "#setPermissionsFolder"
+    );
+    const setPermissionsSharepointList = this.domElement.querySelector(
+      "#setPermissionsSharepointList"
+    );
     const actionsContainer = this.domElement.querySelector("#qms_actions");
     const clickCountFilesOp1 = this.domElement.querySelector("#countFiles_Op1");
     const clickCountFilesOp2 = this.domElement.querySelector("#countFiles_Op2");
@@ -121,8 +131,42 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     }
 
     //Set Permissions
-    if (setPermissions) {
-      setPermissions.addEventListener("click", () => {
+    if (setPermissionsFolder) {
+      setPermissionsFolder.addEventListener("click", () => {
+        getIdGroup(this.context.spHttpClient, sharepointUrl);
+
+        const manageRolesValue = [
+          { nation: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
+          { nation: "Japan-JP", groupId: 26, newRoleId: 1073741826 },
+        ];
+
+        const filterRoles = manageRolesValue.filter(
+          (role) => role.nation === "Viet Nam-VN"
+        );
+
+        filterRoles.forEach(({ nation, groupId, newRoleId }) => {
+          manageRolesFolder(
+            this.context.spHttpClient,
+            sharepointUrl,
+            "ProjectFolder",
+            `PROJECT/${nation}`,
+            groupId,
+            newRoleId,
+            this.context.pageContext.legacyPageContext.formDigestValue
+          );
+        });
+
+        handleClick(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointSite,
+          "Set Permissions Folder"
+        );
+      });
+    }
+
+    if (setPermissionsSharepointList) {
+      setPermissionsSharepointList.addEventListener("click", () => {
         getIdGroup(this.context.spHttpClient, sharepointUrl);
 
         const manageRolesValue = [
@@ -146,7 +190,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
-          "Set Permissions"
+          "Set Permissions Sharepoint List"
         );
       });
     }
@@ -703,12 +747,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         "odata-version": "",
       },
     };
-    const subFolderUrl = `Folder/PROJECT/${parentFolderName}/${subFolderName}`;
+    const subFolderUrl = `ProjectFolder/PROJECT/${parentFolderName}/${subFolderName}`;
     const subFolders = ["Promotion", "Design", "Build"];
     const arrayFolderUrl: string[] = [];
     return this.context.spHttpClient
       .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Folder/PROJECT/${parentFolderName}/${subFolderName}')`,
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('ProjectFolder/PROJECT/${parentFolderName}/${subFolderName}')`,
         SPHttpClient.configurations.v1,
         optionsHTTP
       )
@@ -746,10 +790,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .then(() => {
         console.log(
-          `Created subfolders ${subFolderName} in: Folder/PROJECT/${parentFolderName}`
+          `Created subfolders ${subFolderName} in: ProjectFolder/PROJECT/${parentFolderName}`
         );
         alert(
-          `Created subfolders ${subFolderName} in: Folder/PROJECT/${parentFolderName}`
+          `Created subfolders ${subFolderName} in: ProjectFolder/PROJECT/${parentFolderName}`
         );
       })
       .catch((error) => {
@@ -772,14 +816,14 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
     return this.context.spHttpClient
       .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('Folder/PROJECT/${folderName}')`,
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('ProjectFolder/PROJECT/${folderName}')`,
         SPHttpClient.configurations.v1,
         optionsHTTP
       )
       .then((response: SPHttpClientResponse) => response.json())
       .then(() => {
-        console.log(`Created folders ${folderName} in: Folder/PROJECT`);
-        alert(`Created folders ${folderName} in: Folder/PROJECT`);
+        console.log(`Created folders ${folderName} in: ProjectFolder/PROJECT`);
+        alert(`Created folders ${folderName} in: ProjectFolder/PROJECT`);
         return Promise.all(
           subFolderNames.map((subFolderName) =>
             this.createSubfolder(folderName, subFolderName)
