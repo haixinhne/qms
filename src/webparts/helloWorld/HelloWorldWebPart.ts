@@ -13,6 +13,8 @@ import {
   onCountFilesFoldersOption2,
 } from "./CountFiles";
 
+import { updateNationColumn } from "./UpdateNation";
+
 import {
   SPHttpClient,
   SPHttpClientResponse,
@@ -127,41 +129,62 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           nameSharepointSite,
           "Create Folder"
         );
+        this.onUpdateNationColumn();
       });
     }
 
     //Set Permissions
     if (setPermissionsFolder) {
       setPermissionsFolder.addEventListener("click", () => {
-        getIdGroup(this.context.spHttpClient, sharepointUrl);
+        this.getDataFromSharePointList().then((folderData) => {
+          if (!folderData || folderData.length === 0) {
+            console.warn("No folder data retrieved from SharePoint list.");
+            return;
+          }
 
-        const manageRolesValue = [
-          { nation: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
-          { nation: "Japan-JP", groupId: 26, newRoleId: 1073741826 },
-        ];
+          const manageRolesValue = [
+            { nameItems: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
+            { nameItems: "Japan-JP", groupId: 26, newRoleId: 1073741826 },
+          ];
 
-        const filterRoles = manageRolesValue.filter(
-          (role) => role.nation === "Viet Nam-VN"
-        );
+          folderData.forEach(({ subFolderName, folderName }) => {
+            let roleInfo = null;
 
-        filterRoles.forEach(({ nation, groupId, newRoleId }) => {
-          manageRolesFolder(
+            for (let i = 0; i < manageRolesValue.length; i++) {
+              if (manageRolesValue[i].nameItems === folderName) {
+                roleInfo = manageRolesValue[i];
+                break;
+              }
+            }
+
+            if (roleInfo) {
+              const folderPath = `/sites/QMS/ProjectFolder/PROJECT/${subFolderName}`;
+              const { groupId, newRoleId } = roleInfo;
+
+              manageRolesFolder(
+                this.context.spHttpClient,
+                sharepointUrl,
+                folderPath,
+                groupId,
+                newRoleId,
+                this.context.pageContext.legacyPageContext.formDigestValue
+              ).then(() => {
+                console.log(
+                  `Set permissions for folder '${subFolderName}' with Nation: '${folderName}'`
+                );
+              });
+            } else {
+              console.warn(`No permissions found for Nation: ${folderName}`);
+            }
+          });
+
+          handleClick(
             this.context.spHttpClient,
             sharepointUrl,
-            "ProjectFolder",
-            `PROJECT/${nation}`,
-            groupId,
-            newRoleId,
-            this.context.pageContext.legacyPageContext.formDigestValue
+            nameSharepointSite,
+            "Set Permissions Folder"
           );
         });
-
-        handleClick(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointSite,
-          "Set Permissions Folder"
-        );
       });
     }
 
@@ -698,9 +721,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   }
 
   //Tạo các thư mục từ sharepoint list-------------------------------------------------------------------------------------------------------------
-  // Hàm lấy data từ sharepoint list (Lấy tên thư mục là 1 cột ở sharepoint list)
+  //Hàm lấy data từ sharepoint list
   private getDataFromSharePointList(): Promise<
-    { folderName: string; subFolderName: string }[]
+    { folderName: string; subFolderName: string; customId: string }[]
   > {
     return this.context.spHttpClient
       .get(
@@ -712,18 +735,19 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .then((data) => {
         const folderValues = data.value
-          //Tên folder cha = tên cột Nation, con = tên cột ProjectName
-          .filter((item: any) => item.Nation && item.ProjectName)
+          //Tên folder con = tên cột ProjectName
+          .filter(
+            (item: any) => item.Nation && item.ProjectName && item.CustomID
+          )
           .map((item: any) => ({
             folderName: item.Nation,
             subFolderName: item.ProjectName,
+            customId: item.CustomID,
           }))
           .filter(
             (name: any, index: Number, self: any) =>
               self.findIndex(
-                (i: any) =>
-                  i.folderName === name.folderName &&
-                  i.subFolderName === name.subFolderName
+                (i: any) => i.subFolderName === name.subFolderName
               ) === index
           );
         console.log("Input data from Sharepoint list:", folderValues);
@@ -736,10 +760,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   }
 
   // Hàm tạo subfolder
-  private createSubfolder(
-    parentFolderName: string,
-    subFolderName: string
-  ): Promise<any> {
+  private createSubfolder(subFolderName: string): Promise<any> {
     const optionsHTTP: ISPHttpClientOptions = {
       headers: {
         accept: "application/json; odata=verbose",
@@ -747,12 +768,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         "odata-version": "",
       },
     };
-    const subFolderUrl = `ProjectFolder/PROJECT/${parentFolderName}/${subFolderName}`;
+    const subFolderUrl = `ProjectFolder/PROJECT/${subFolderName}`;
     const subFolders = ["Promotion", "Design", "Build"];
     const arrayFolderUrl: string[] = [];
     return this.context.spHttpClient
       .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('ProjectFolder/PROJECT/${parentFolderName}/${subFolderName}')`,
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('ProjectFolder/PROJECT/${subFolderName}')`,
         SPHttpClient.configurations.v1,
         optionsHTTP
       )
@@ -790,48 +811,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .then(() => {
         console.log(
-          `Created subfolders ${subFolderName} in: ProjectFolder/PROJECT/${parentFolderName}`
+          `Created subfolders: ${subFolderName} in: ProjectFolder/PROJECT`
         );
-        alert(
-          `Created subfolders ${subFolderName} in: ProjectFolder/PROJECT/${parentFolderName}`
-        );
+        alert(`Created subfolders: ${subFolderName} in: ProjectFolder/PROJECT`);
       })
       .catch((error) => {
         console.error("Error creating subfolder:", error);
-      });
-  }
-
-  //Hàm tạo folder
-  private createFolder(
-    folderName: string,
-    subFolderNames: string[]
-  ): Promise<any> {
-    const optionsHTTP: ISPHttpClientOptions = {
-      headers: {
-        accept: "application/json; odata=verbose",
-        "content-type": "application/json; odata=verbose",
-        "odata-version": "",
-      },
-    };
-
-    return this.context.spHttpClient
-      .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('ProjectFolder/PROJECT/${folderName}')`,
-        SPHttpClient.configurations.v1,
-        optionsHTTP
-      )
-      .then((response: SPHttpClientResponse) => response.json())
-      .then(() => {
-        console.log(`Created folders ${folderName} in: ProjectFolder/PROJECT`);
-        alert(`Created folders ${folderName} in: ProjectFolder/PROJECT`);
-        return Promise.all(
-          subFolderNames.map((subFolderName) =>
-            this.createSubfolder(folderName, subFolderName)
-          )
-        );
-      })
-      .catch((error) => {
-        console.error("Error creating folder or subfolders:", error);
       });
   }
 
@@ -839,29 +824,46 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   private onCreateFolder(): Promise<any> {
     return this.getDataFromSharePointList()
       .then((folderPairs) => {
-        const folderMap = folderPairs.reduce((acc, pair) => {
-          if (!acc[pair.folderName]) {
-            acc[pair.folderName] = [];
-          }
-          acc[pair.folderName].push(pair.subFolderName);
-          return acc;
-        }, {} as Record<string, string[]>);
+        const subFolder = folderPairs.map(({ subFolderName }) => subFolderName);
+        const createSubFolder = subFolder.map((subFolderName) =>
+          this.createSubfolder(subFolderName)
+        );
 
-        //Tạo các thư mục kèm các thư mục con tương ứng
-        const loopCreateFolder = [];
-        for (const folderName in folderMap) {
-          if (folderMap.hasOwnProperty(folderName)) {
-            const subFolderNames = folderMap[folderName];
-            loopCreateFolder.push(
-              this.createFolder(folderName, subFolderNames)
-            );
-          }
-        }
-
-        return Promise.all(loopCreateFolder);
+        return Promise.all(createSubFolder);
       })
       .catch((error) => {
         console.error("Error processing folders and subfolders:", error);
+      });
+  }
+
+  //Update cột Nation ---------------------------------------------------------------------------------------------------------------------------
+  private onUpdateNationColumn(): Promise<any> {
+    return this.getDataFromSharePointList()
+      .then((folderValues) => {
+        if (!folderValues || folderValues.length === 0) {
+          return Promise.reject("No folder data found");
+        }
+
+        const updatePromises = folderValues.map(
+          ({ folderName, subFolderName, customId }) => {
+            return updateNationColumn(
+              this.context.spHttpClient,
+              sharepointUrl,
+              subFolderName,
+              folderName,
+              customId
+            );
+          }
+        );
+
+        return Promise.all(updatePromises);
+      })
+      .then(() => {
+        console.log("Updated Nation column for all subfolders");
+        alert("Updated Nation column for all subfolders");
+      })
+      .catch((error) => {
+        console.error("Error updating Nation column:", error);
       });
   }
 

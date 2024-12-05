@@ -211,44 +211,111 @@ const addNewRoleItem = (
 };
 
 //Set permissions cho Folders--------------------------------------------------------------------------------------------------------------------
-const getFolderServerRelativeUrl = (
+export const manageRolesFolder = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  libraryName: string,
-  folderPath: string
-): Promise<string> => {
-  const requestUrl = `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${libraryName}/${folderPath}')`;
-  return spHttpClient
-    .get(requestUrl, SPHttpClient.configurations.v1)
-    .then((response: SPHttpClientResponse) => {
-      if (!response.ok) {
-        return Promise.reject("Failed to retrieve folder information");
-      }
-      return response.json();
+  folderUrl: string,
+  groupId: number,
+  newRoleId: number,
+  formDigestValue: string
+): Promise<void> => {
+  return breakRoleInheritanceFolder(
+    spHttpClient,
+    sharepointUrl,
+    folderUrl,
+    formDigestValue
+  )
+    .then(() =>
+      removeAllRolesFromFolder(
+        spHttpClient,
+        sharepointUrl,
+        folderUrl,
+        formDigestValue
+      )
+    )
+    .then(() =>
+      addNewRoleToFolder(
+        spHttpClient,
+        sharepointUrl,
+        folderUrl,
+        groupId,
+        newRoleId,
+        formDigestValue
+      )
+    )
+    .then(() => {
+      console.log(`Updated roles for folder '${folderUrl}'`);
+      alert(`Updated roles for folder '${folderUrl}'`);
     })
-    .then((data) => {
-      console.log(`Folder URL: ${data.ServerRelativeUrl}`);
-      return data.ServerRelativeUrl;
-    });
+    .catch((error) =>
+      console.error(`Error updating roles for folder '${folderUrl}':`, error)
+    );
 };
 
-// Ngắt quyền kế thừa của mục
 const breakRoleInheritanceFolder = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   folderUrl: string,
   formDigestValue: string
 ): Promise<void> => {
-  const requestUrl = `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/listItemAllFields/breakroleinheritance(true)`;
+  const requestUrl = `${sharepointUrl}/_api/web/getFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields/breakroleinheritance(copyRoleAssignments=true, clearSubscopes=true)`;
   return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue).then(
     () => {
-      console.log(`Break role inheritance for folder: ${folderUrl}`);
+      console.log(`Broke role inheritance for folder: ${folderUrl}`);
     }
   );
 };
 
-//Thêm quyền mới cho nhóm
-const addNewRoleFolder = (
+const removeAllRolesFromFolder = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  folderUrl: string,
+  formDigestValue: string
+): Promise<void> => {
+  const requestUrl = `${sharepointUrl}/_api/web/getFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields/roleassignments`;
+
+  return spHttpClient
+    .get(requestUrl, SPHttpClient.configurations.v1)
+    .then((response: SPHttpClientResponse) => {
+      if (!response.ok) {
+        return Promise.reject("Failed to retrieve role assignments for folder");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      const removePromises = data.value.map((roleAssignment: any) =>
+        removeCurrentRoleFromFolder(
+          spHttpClient,
+          sharepointUrl,
+          folderUrl,
+          roleAssignment.PrincipalId,
+          formDigestValue
+        )
+      );
+
+      return Promise.all(removePromises).then(() => {});
+    });
+};
+
+const removeCurrentRoleFromFolder = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  folderUrl: string,
+  groupId: number,
+  formDigestValue: string
+): Promise<void> => {
+  const requestUrl = `${sharepointUrl}/_api/web/getFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields/roleassignments/removeroleassignment(principalid=${groupId})`;
+
+  return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue).then(
+    () => {
+      console.log(
+        `Removed role for group ID ${groupId} from folder: ${folderUrl}`
+      );
+    }
+  );
+};
+
+const addNewRoleToFolder = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   folderUrl: string,
@@ -256,48 +323,13 @@ const addNewRoleFolder = (
   roleId: number,
   formDigestValue: string
 ): Promise<void> => {
-  const requestUrl = `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/listItemAllFields/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
-  return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue);
-};
+  const requestUrl = `${sharepointUrl}/_api/web/getFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields/roleassignments/addroleassignment(principalid=${groupId}, roledefid=${roleId})`;
 
-//Hàm quản lý quyền
-export const manageRolesFolder = (
-  spHttpClient: SPHttpClient,
-  sharepointUrl: string,
-  libraryName: string,
-  folderPath: string,
-  groupId: number,
-  newRoleId: number,
-  formDigestValue: string
-): Promise<void> => {
-  return getFolderServerRelativeUrl(
-    spHttpClient,
-    sharepointUrl,
-    libraryName,
-    folderPath
-  )
-    .then((folderUrl) =>
-      breakRoleInheritanceFolder(
-        spHttpClient,
-        sharepointUrl,
-        folderUrl,
-        formDigestValue
-      ).then(() =>
-        addNewRoleFolder(
-          spHttpClient,
-          sharepointUrl,
-          folderUrl,
-          groupId,
-          newRoleId,
-          formDigestValue
-        )
-      )
-    )
-    .then(() => {
-      console.log(`Updated roles for folder: ${folderPath}`);
-      alert(`Updated roles for folder: ${folderPath}`);
-    })
-    .catch((error) => {
-      console.error(`Error updating roles for folder: ${folderPath}`, error);
-    });
+  return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue).then(
+    () => {
+      console.log(
+        `Added new role for group ID ${groupId} to folder: ${folderUrl}`
+      );
+    }
+  );
 };

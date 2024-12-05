@@ -40,7 +40,7 @@ const getDataFromSharepointList = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string
-): Promise<{ folderName: string; subFolderName: string }[]> => {
+): Promise<{ subFolderName: string }[]> => {
   const listUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items`;
 
   return spHttpClient
@@ -50,18 +50,15 @@ const getDataFromSharepointList = (
     })
     .then((data) => {
       const folderValues = data.value
-        //Tên folder cha = tên cột Nation, con = tên cột ProjectName
+        //Tên folder con = tên cột ProjectName
         .filter((item: any) => item.Nation && item.ProjectName)
         .map((item: any) => ({
-          folderName: item.Nation,
           subFolderName: item.ProjectName,
         }))
         .filter(
           (name: any, index: Number, self: any) =>
             self.findIndex(
-              (i: any) =>
-                i.folderName === name.folderName &&
-                i.subFolderName === name.subFolderName
+              (i: any) => i.subFolderName === name.subFolderName
             ) === index
         );
 
@@ -134,14 +131,13 @@ const countFiles = (
 const getUrlCountFiles = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  parentFolderName: string,
   subFolderName: string | string[]
 ): Promise<any> => {
   if (typeof subFolderName === "string") {
     subFolderName = [subFolderName];
   }
 
-  const subFolderUrl = `ProjectFolder/PROJECT/${parentFolderName}/${subFolderName}`;
+  const subFolderUrl = `ProjectFolder/PROJECT/${subFolderName}`;
   const subFolders = ["Promotion", "Design", "Build"];
   const arrayFolderUrl: string[] = [];
 
@@ -250,42 +246,24 @@ export const onCountFiles = (
     nameSharepointList
   )
     .then((folderPairs) => {
-      const folderMap = folderPairs.reduce(
-        (acc, { folderName, subFolderName }) => {
-          if (!acc[folderName]) {
-            acc[folderName] = [];
-          }
-          acc[folderName].push(subFolderName);
-          return acc;
-        },
-        {} as Record<string, string[]>
-      );
-
+      const subFolder = folderPairs.map(({ subFolderName }) => subFolderName);
       const updatePromises: Promise<any>[] = [];
 
-      for (const folderName in folderMap) {
-        if (folderMap.hasOwnProperty(folderName)) {
-          const subFolderNames = folderMap[folderName];
-          subFolderNames.forEach((subFolderName) => {
-            updatePromises.push(
-              getUrlCountFiles(
+      subFolder.forEach((subFolderName) => {
+        updatePromises.push(
+          getUrlCountFiles(spHttpClient, sharepointUrl, subFolderName).then(
+            ({ percentFiles }) => {
+              return updateRateSharepoint(
                 spHttpClient,
                 sharepointUrl,
-                folderName,
-                subFolderName
-              ).then(({ percentFiles }) => {
-                return updateRateSharepoint(
-                  spHttpClient,
-                  sharepointUrl,
-                  nameSharepointList,
-                  subFolderName,
-                  percentFiles
-                );
-              })
-            );
-          });
-        }
-      }
+                nameSharepointList,
+                subFolderName,
+                percentFiles
+              );
+            }
+          )
+        );
+      });
 
       return Promise.all(updatePromises);
     })
@@ -436,7 +414,6 @@ const countFilesFoldersOption2 = (
 const getUrlCountFilesFolders = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  parentFolderName: string,
   subFolderName: string | string[]
 ): Promise<void> => {
   const subFolderNames = Array.isArray(subFolderName)
@@ -446,7 +423,7 @@ const getUrlCountFilesFolders = (
   const updatePromises: Promise<void>[] = [];
 
   subFolders.forEach((folder) => {
-    const baseFolderUrl = `ProjectFolder/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
+    const baseFolderUrl = `ProjectFolder/PROJECT/${subFolderNames}/${folder}`;
     const childFolders = childSubFolders[folder];
 
     childFolders.forEach((child) => {
@@ -473,9 +450,7 @@ const getUrlCountFilesFolders = (
   });
 
   return Promise.all(updatePromises).then(() => {
-    console.log(
-      `All updates for ${parentFolderName}/${subFolderNames} completed`
-    );
+    console.log(`All updates for ${subFolderNames} completed`);
   });
 };
 
@@ -483,7 +458,6 @@ const getUrlCountFilesFolders = (
 const getUrlCountFilesFoldersOption2 = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
-  parentFolderName: string,
   subFolderName: string | string[]
 ): Promise<void> => {
   const subFolderNames = Array.isArray(subFolderName)
@@ -493,7 +467,7 @@ const getUrlCountFilesFoldersOption2 = (
   const updatePromises: Promise<void>[] = [];
 
   subFolders.forEach((folder) => {
-    const baseFolderUrl = `ProjectFolder/PROJECT/${parentFolderName}/${subFolderNames}/${folder}`;
+    const baseFolderUrl = `ProjectFolder/PROJECT/${subFolderNames}/${folder}`;
     const childFolders = childSubFolders[folder];
 
     childFolders.forEach((child) => {
@@ -522,9 +496,7 @@ const getUrlCountFilesFoldersOption2 = (
   });
 
   return Promise.all(updatePromises).then(() => {
-    console.log(
-      `All updates for ${parentFolderName}/${subFolderNames} completed`
-    );
+    console.log(`All updates for ${subFolderNames} completed`);
   });
 };
 
@@ -643,33 +615,15 @@ export const onCountFilesFolders = (
     nameSharepointList
   )
     .then((folderPairs) => {
-      const folderMap = folderPairs.reduce<Record<string, string[]>>(
-        (acc, { folderName, subFolderName }) => {
-          acc[folderName] = acc[folderName] || [];
-          acc[folderName].push(subFolderName);
-          return acc;
-        },
-        {}
-      );
-
+      const subFolder = folderPairs.map(({ subFolderName }) => subFolderName);
       const updatePromises: Promise<void>[] = [];
 
-      for (const parentFolderName in folderMap) {
-        if (folderMap.hasOwnProperty(parentFolderName)) {
-          const subFolderNames = folderMap[parentFolderName];
+      subFolder.forEach((subFolderName) => {
+        updatePromises.push(
+          getUrlCountFilesFolders(spHttpClient, sharepointUrl, subFolderName)
+        );
+      });
 
-          subFolderNames.forEach((subFolderName) => {
-            updatePromises.push(
-              getUrlCountFilesFolders(
-                spHttpClient,
-                sharepointUrl,
-                parentFolderName,
-                subFolderName
-              )
-            );
-          });
-        }
-      }
       return Promise.all(updatePromises).then(() => {
         console.log("The number of files updated in Op1");
         alert("The number of files updated in Op1");
@@ -692,38 +646,24 @@ export const onCountFilesFoldersOption2 = (
     nameSharepointList
   )
     .then((folderPairs) => {
-      const folderMap = folderPairs.reduce<Record<string, string[]>>(
-        (acc, { folderName, subFolderName }) => {
-          acc[folderName] = acc[folderName] || [];
-          acc[folderName].push(subFolderName);
-          return acc;
-        },
-        {}
-      );
-
+      const subFolder = folderPairs.map(({ subFolderName }) => subFolderName);
       const updatePromises: Promise<void>[] = [];
 
-      for (const parentFolderName in folderMap) {
-        if (folderMap.hasOwnProperty(parentFolderName)) {
-          const subFolderNames = folderMap[parentFolderName];
-
-          subFolderNames.forEach((subFolderName) => {
-            updatePromises.push(
-              getUrlCountFilesFoldersOption2(
-                spHttpClient,
-                sharepointUrl,
-                parentFolderName,
-                subFolderName
-              )
-            );
-          });
-        }
-      }
+      subFolder.forEach((subFolderName) => {
+        updatePromises.push(
+          getUrlCountFilesFoldersOption2(
+            spHttpClient,
+            sharepointUrl,
+            subFolderName
+          )
+        );
+      });
       return Promise.all(updatePromises).then(() => {
         console.log("The number of files updated in Op2");
         alert("The number of files updated in Op2");
       });
     })
+
     .catch((error) => {
       console.error("Error processing folders and subfolders:", error);
     });
