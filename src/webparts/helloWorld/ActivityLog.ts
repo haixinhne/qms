@@ -28,7 +28,7 @@ export const handleClick = (
       second: "2-digit",
       hour12: true,
     });
-    const getMessage = `${getTimestamp}: ${userName} clicked the ${buttonName} button`;
+    const getMessage = `${getTimestamp}: ${userName} Run "${buttonName}"`;
     const folderUrl = `/sites/${nameSharepointSite}/ProjectFolder/ADMIN/Activity log`;
     const fileName = "Activity_log.json";
 

@@ -36,8 +36,8 @@ export const updateNationColumn = (
           );
         });
       }
-      console.log(`Updated Nation column for ${subFolderName}`);
-      alert(`Updated Nation column for ${subFolderName}`);
+      console.log(`Updated Nation and CustomId for ${subFolderName}`);
+      alert(`Updated Nation and CustomId for ${subFolderName}`);
     })
     .catch((error) => {
       console.error(

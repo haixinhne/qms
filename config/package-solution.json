@@ -1,8 +1,8 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
   "solution": {
-    "name": "QMS-client-side-solution",
-    "id": "932b2c41-0620-4397-a46b-292daa224902",
+    "name": "QMS-client-side-solution-241210",
+    "id": "932b2c41-0620-4397-a46b-292daa224903",
     "version": "1.0.0.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,

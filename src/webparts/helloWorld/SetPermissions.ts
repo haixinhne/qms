@@ -90,8 +90,7 @@ export const manageRoles = (
       );
     })
     .then(() => {
-      console.log(`Updated roles for all items with branch '${nameItems}'`);
-      alert(`Updated roles for all items with branch '${nameItems}'`);
+      console.log(`Updated roles for all items`);
     })
     .catch((error) =>
       console.error(
@@ -139,7 +138,7 @@ const breakRoleInheritanceItem = (
   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/breakroleinheritance(true)`;
   return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue).then(
     () => {
-      console.log(`Break role inheritance for item ID: ${itemId}`);
+      console.log(`Break role inheritance for all items`);
       return itemId;
     }
   );
@@ -157,7 +156,7 @@ const removeCurrentRoleFromItem = (
   const requestUrl = `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})/roleassignments/removeroleassignment(principalid=${groupId})`;
   return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue).then(
     () => {
-      console.log(`Remove the current group role from item ID: ${itemId}`);
+      console.log(`Remove the current group role from all items`);
       return itemId;
     }
   );
@@ -244,11 +243,10 @@ export const manageRolesFolder = (
       )
     )
     .then(() => {
-      console.log(`Updated roles for folder '${folderUrl}'`);
-      alert(`Updated roles for folder '${folderUrl}'`);
+      console.log(`Updated roles for all folder`);
     })
     .catch((error) =>
-      console.error(`Error updating roles for folder '${folderUrl}':`, error)
+      console.error(`Error updating roles for folder ${folderUrl}:`, error)
     );
 };
 
@@ -261,7 +259,7 @@ const breakRoleInheritanceFolder = (
   const requestUrl = `${sharepointUrl}/_api/web/getFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields/breakroleinheritance(copyRoleAssignments=true, clearSubscopes=true)`;
   return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue).then(
     () => {
-      console.log(`Broke role inheritance for folder: ${folderUrl}`);
+      console.log(`Broke role inheritance for all folder`);
     }
   );
 };
@@ -308,9 +306,7 @@ const removeCurrentRoleFromFolder = (
 
   return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue).then(
     () => {
-      console.log(
-        `Removed role for group ID ${groupId} from folder: ${folderUrl}`
-      );
+      console.log(`Removed role for group from folder`);
     }
   );
 };
@@ -327,9 +323,7 @@ const addNewRoleToFolder = (
 
   return executeRequest(spHttpClient, requestUrl, "POST", formDigestValue).then(
     () => {
-      console.log(
-        `Added new role for group ID ${groupId} to folder: ${folderUrl}`
-      );
+      console.log(`Added new role for group to folder`);
     }
   );
 };

@@ -57,28 +57,28 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
      <div class=${styles.qms_btn}>
      <button class="${
        styles.qms_button
-     }" id="createSharepointList">Create Sharepoint</button>
+     }" id="createUpdateProjectList">Create/Update ProjectList</button>
 
         <button class="${
           styles.qms_button
-        }" id="createFolder">Create Folder</button>
+        }" id="createProjectFolder">Create ProjectFoder</button>
 
          <button class="${
            styles.qms_button
-         }" id="setPermissionsFolder">Set Permissions Folder</button>
+         }" id="setFolderPermissions">Set Folder Permissions</button>
 
          <button class="${
            styles.qms_button
-         }" id="setPermissionsSharepointList">Set Permissions Sharepoint</button>
+         }" id="setListPermissions">Set List Permissions</button>
 
 
          <button class="${
            styles.qms_button
-         }" id="countFiles_Op1">Count Files Op1</button>
+         }" id="updateProgressProject_Op1">Update Progress Project Op1</button>
 
           <button class="${
             styles.qms_button
-          }" id="countFiles_Op2">Count Files Op2</button>
+          }" id="updateProgressProject_Op2">Update Progress Project Op2</button>
          </div>
 
      <div class="${styles.qms_actions}" id= "qms_actions">
@@ -87,18 +87,24 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
      </section>`;
 
     const clickCreateSharepoint = this.domElement.querySelector(
-      "#createSharepointList"
+      "#createUpdateProjectList"
     );
-    const clickCreateFolder = this.domElement.querySelector("#createFolder");
-    const setPermissionsFolder = this.domElement.querySelector(
-      "#setPermissionsFolder"
+    const clickCreateFolder = this.domElement.querySelector(
+      "#createProjectFolder"
     );
-    const setPermissionsSharepointList = this.domElement.querySelector(
-      "#setPermissionsSharepointList"
+    const setFolderPermissions = this.domElement.querySelector(
+      "#setFolderPermissions"
+    );
+    const setListPermissions = this.domElement.querySelector(
+      "#setListPermissions"
     );
     const actionsContainer = this.domElement.querySelector("#qms_actions");
-    const clickCountFilesOp1 = this.domElement.querySelector("#countFiles_Op1");
-    const clickCountFilesOp2 = this.domElement.querySelector("#countFiles_Op2");
+    const clickCountFilesOp1 = this.domElement.querySelector(
+      "#updateProgressProject_Op1"
+    );
+    const clickCountFilesOp2 = this.domElement.querySelector(
+      "#updateProgressProject_Op2"
+    );
 
     if (!actionsContainer) {
       console.error("The actionsContainer element was not found.");
@@ -114,7 +120,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
-          "Create Sharepoint"
+          "Create/Update ProjectList"
         );
       });
     }
@@ -127,15 +133,16 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
-          "Create Folder"
+          "Create ProjectFoder"
         );
         this.onUpdateNationColumn();
       });
     }
 
     //Set Permissions
-    if (setPermissionsFolder) {
-      setPermissionsFolder.addEventListener("click", () => {
+    //Folder
+    if (setFolderPermissions) {
+      setFolderPermissions.addEventListener("click", () => {
         this.getDataFromSharePointList().then((folderData) => {
           if (!folderData || folderData.length === 0) {
             console.warn("No folder data retrieved from SharePoint list.");
@@ -143,77 +150,118 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           }
 
           const manageRolesValue = [
-            { nameItems: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
             { nameItems: "Japan-JP", groupId: 26, newRoleId: 1073741826 },
+            { nameItems: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
           ];
 
+          const allPromises: Promise<void>[] = [];
+
           folderData.forEach(({ subFolderName, folderName }) => {
-            let roleInfo = null;
+            const folderPath = `/sites/QMS/ProjectFolder/PROJECT/${subFolderName}`;
+            const roleInfo = [];
 
             for (let i = 0; i < manageRolesValue.length; i++) {
               if (manageRolesValue[i].nameItems === folderName) {
-                roleInfo = manageRolesValue[i];
+                roleInfo.push({
+                  groupId: manageRolesValue[i].groupId,
+                  newRoleId: manageRolesValue[i].newRoleId,
+                });
                 break;
               }
             }
 
-            if (roleInfo) {
-              const folderPath = `/sites/QMS/ProjectFolder/PROJECT/${subFolderName}`;
-              const { groupId, newRoleId } = roleInfo;
-
-              manageRolesFolder(
-                this.context.spHttpClient,
-                sharepointUrl,
-                folderPath,
-                groupId,
-                newRoleId,
-                this.context.pageContext.legacyPageContext.formDigestValue
-              ).then(() => {
-                console.log(
-                  `Set permissions for folder '${subFolderName}' with Nation: '${folderName}'`
-                );
-              });
-            } else {
+            if (roleInfo.length === 0) {
               console.warn(`No permissions found for Nation: ${folderName}`);
             }
+
+            roleInfo.push({ groupId: 36, newRoleId: 1073741829 });
+
+            roleInfo.forEach(({ groupId, newRoleId }) => {
+              allPromises.push(
+                manageRolesFolder(
+                  this.context.spHttpClient,
+                  sharepointUrl,
+                  folderPath,
+                  groupId,
+                  newRoleId,
+                  this.context.pageContext.legacyPageContext.formDigestValue
+                )
+              );
+            });
           });
+
+          Promise.all(allPromises)
+            .then(() => {
+              console.log("All folder permissions have been successfully set");
+              alert("All folder permissions have been successfully set");
+            })
+            .catch((error) => {
+              console.error(
+                "An error occurred while setting folder permissions:",
+                error
+              );
+            });
 
           handleClick(
             this.context.spHttpClient,
             sharepointUrl,
             nameSharepointSite,
-            "Set Permissions Folder"
+            "Set Folder Permissions"
           );
         });
       });
     }
 
-    if (setPermissionsSharepointList) {
-      setPermissionsSharepointList.addEventListener("click", () => {
+    //Sharepoint list
+    if (setListPermissions) {
+      setListPermissions.addEventListener("click", () => {
         getIdGroup(this.context.spHttpClient, sharepointUrl);
 
         const manageRolesValue = [
-          { nameItems: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
           { nameItems: "Japan-JP", groupId: 26, newRoleId: 1073741826 },
+          { nameItems: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
         ];
 
+        const allPromises: Promise<void>[] = [];
+
         manageRolesValue.forEach(({ nameItems, groupId, newRoleId }) => {
-          manageRoles(
-            this.context.spHttpClient,
-            sharepointUrl,
-            nameSharepointList,
-            nameItems,
-            groupId,
-            newRoleId,
-            this.context.pageContext.legacyPageContext.formDigestValue
-          );
+          const roleInfo = [
+            { groupId, newRoleId },
+            { groupId: 36, newRoleId: 1073741829 },
+          ];
+
+          roleInfo.forEach(({ groupId, newRoleId }) => {
+            allPromises.push(
+              manageRoles(
+                this.context.spHttpClient,
+                sharepointUrl,
+                nameSharepointList,
+                nameItems,
+                groupId,
+                newRoleId,
+                this.context.pageContext.legacyPageContext.formDigestValue
+              )
+            );
+          });
         });
+
+        Promise.all(allPromises)
+          .then(() => {
+            console.log("All permissions have been successfully set");
+            alert("All permissions have been successfully set");
+          })
+          .catch((error) => {
+            console.error(
+              "An error occurred while setting permissions:",
+              error
+            );
+          });
 
         handleClick(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
-          "Set Permissions Sharepoint List"
+          "Set List Permissions"
         );
       });
     }
@@ -235,7 +283,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
-          "Count Files Option 1"
+          "Update Progress Project Op1"
         );
       });
     }
@@ -256,7 +304,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
-          "Count Files Option 2"
+          "Update Progress Project Op2"
         );
       });
     }
@@ -379,6 +427,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   private async createSharePointList(listName: string): Promise<any> {
     const listNameExists = await this.checkNameSharepointList(listName);
     if (listNameExists) {
+      console.log(`List '${listName}' exists.`);
+
       alert(`${listName} already exists`);
       return;
     }
@@ -860,7 +910,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
       .then(() => {
         console.log("Updated Nation column for all subfolders");
-        alert("Updated Nation column for all subfolders");
       })
       .catch((error) => {
         console.error("Error updating Nation column:", error);

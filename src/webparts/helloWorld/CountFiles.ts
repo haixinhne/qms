@@ -122,6 +122,7 @@ const countFiles = (
     );
     const percentFiles =
       totalFiles > 0 ? parseFloat((approvedFiles / totalFiles).toFixed(2)) : 0;
+    console.log(percentFiles);
 
     return { totalFiles, approvedFiles, percentFiles };
   });
@@ -164,7 +165,7 @@ const getUrlCountFiles = (
     });
 };
 
-//Update Rate lên sharepoint list
+//Update Progress lên sharepoint list
 const updateRateSharepoint = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -193,7 +194,7 @@ const updateRateSharepoint = (
           __metadata: {
             type: `SP.Data.${nameSharepointList}ListItem`,
           },
-          Rate: rateValue,
+          Progress: rateValue,
         });
 
         const optionsHTTP: ISPHttpClientOptions = {
@@ -217,7 +218,7 @@ const updateRateSharepoint = (
             if (!response.ok) {
               return response.text().then(() => {
                 Promise.reject(
-                  `Failed to update Rate for item ${itemId}: ${response.statusText}`
+                  `Failed to update Progress for item ${itemId}: ${response.statusText}`
                 );
               });
             }
@@ -229,7 +230,7 @@ const updateRateSharepoint = (
       return Promise.reject(`No item found for ProjectName: ${subFolderName}`);
     })
     .catch((error) => {
-      console.error("Error updating Rate value:", error);
+      console.error("Error updating Progress value:", error);
       return Promise.reject(error);
     });
 };
@@ -500,7 +501,7 @@ const getUrlCountFilesFoldersOption2 = (
   });
 };
 
-//Update Rate cho thư mục
+//Update Progress cho thư mục
 //Option1
 const updateFolderApprovedFolders = (
   spHttpClient: SPHttpClient,
@@ -625,8 +626,8 @@ export const onCountFilesFolders = (
       });
 
       return Promise.all(updatePromises).then(() => {
-        console.log("The number of files updated in Op1");
-        alert("The number of files updated in Op1");
+        console.log("The number of files updated in Option 1");
+        alert("The number of files updated in Option 1");
       });
     })
     .catch((error) => {
@@ -659,8 +660,8 @@ export const onCountFilesFoldersOption2 = (
         );
       });
       return Promise.all(updatePromises).then(() => {
-        console.log("The number of files updated in Op2");
-        alert("The number of files updated in Op2");
+        console.log("The number of files updated in Option 2");
+        alert("The number of files updated in Option 2");
       });
     })
 
