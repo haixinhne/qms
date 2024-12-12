@@ -5,12 +5,18 @@ import styles from "./HelloWorldWebPart.module.scss";
 import * as strings from "HelloWorldWebPartStrings";
 import * as XLSX from "xlsx";
 import { getIdGroup, manageRoles, manageRolesFolder } from "./SetPermissions";
-import { handleClick, getUserName, displayJsonContent } from "./ActivityLog";
+import {
+  handleClick,
+  historyLog,
+  getUserName,
+  displayJsonContent,
+} from "./ActivityLog";
 import {
   childSubFolders,
-  onCountFiles,
-  onCountFilesFolders,
-  onCountFilesFoldersOption2,
+  onCountFileUpdateSharepointList,
+  onProgressFiles,
+  onCountFileUpdateFolders,
+  onCountFileUpdateFoldersOption2,
 } from "./CountFiles";
 
 import { updateNationColumn } from "./UpdateNation";
@@ -28,6 +34,10 @@ const excelUrl = "/sites/QMS/ProjectFolder/ADMIN/Book1.xlsx";
 const sharepointUrl = "https://iscapevn.sharepoint.com/sites/QMS";
 const nameSharepointSite = "QMS";
 const nameSharepointList = "ProjectList";
+const manageRolesValue = [
+  { nameItems: "Japan-JP", groupId: 26, newRoleId: 1073741826 },
+  { nameItems: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
+];
 
 export interface IHelloWorldWebPartProps {
   description: string;
@@ -107,7 +117,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     );
 
     if (!actionsContainer) {
-      console.error("The actionsContainer element was not found.");
+      console.error("Error");
       return;
     }
 
@@ -145,14 +155,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       setFolderPermissions.addEventListener("click", () => {
         this.getDataFromSharePointList().then((folderData) => {
           if (!folderData || folderData.length === 0) {
-            console.warn("No folder data retrieved from SharePoint list.");
+            console.warn("Error");
             return;
           }
-
-          const manageRolesValue = [
-            { nameItems: "Japan-JP", groupId: 26, newRoleId: 1073741826 },
-            { nameItems: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
-          ];
 
           const allPromises: Promise<void>[] = [];
 
@@ -171,7 +176,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             }
 
             if (roleInfo.length === 0) {
-              console.warn(`No permissions found for Nation: ${folderName}`);
+              console.warn(`Error: ${folderName}`);
             }
 
             roleInfo.push({ groupId: 36, newRoleId: 1073741829 });
@@ -192,14 +197,16 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
           Promise.all(allPromises)
             .then(() => {
-              console.log("All folder permissions have been successfully set");
-              alert("All folder permissions have been successfully set");
+              alert("The folder permissions were set successfully");
+              historyLog(
+                this.context.spHttpClient,
+                sharepointUrl,
+                nameSharepointSite,
+                "The folder permissions were set successfully"
+              );
             })
             .catch((error) => {
-              console.error(
-                "An error occurred while setting folder permissions:",
-                error
-              );
+              console.error("Error:", error);
             });
 
           handleClick(
@@ -216,11 +223,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     if (setListPermissions) {
       setListPermissions.addEventListener("click", () => {
         getIdGroup(this.context.spHttpClient, sharepointUrl);
-
-        const manageRolesValue = [
-          { nameItems: "Japan-JP", groupId: 26, newRoleId: 1073741826 },
-          { nameItems: "Viet Nam-VN", groupId: 25, newRoleId: 1073741826 },
-        ];
 
         const allPromises: Promise<void>[] = [];
 
@@ -247,8 +249,13 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
         Promise.all(allPromises)
           .then(() => {
-            console.log("All permissions have been successfully set");
-            alert("All permissions have been successfully set");
+            alert("The list permissions were set successfully");
+            historyLog(
+              this.context.spHttpClient,
+              sharepointUrl,
+              nameSharepointSite,
+              "The list permissions were set successfully"
+            );
           })
           .catch((error) => {
             console.error(
@@ -269,12 +276,17 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     //Count files
     if (clickCountFilesOp1) {
       clickCountFilesOp1.addEventListener("click", () => {
-        onCountFiles(
+        onCountFileUpdateSharepointList(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointList
         );
-        onCountFilesFolders(
+        onProgressFiles(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
+        onCountFileUpdateFolders(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointList
@@ -285,17 +297,28 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           nameSharepointSite,
           "Update Progress Project Op1"
         );
+        historyLog(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointSite,
+          `The Progress column was updated successfully in ${nameSharepointList} and ProjectFolder`
+        );
       });
     }
 
     if (clickCountFilesOp2) {
       clickCountFilesOp2.addEventListener("click", () => {
-        onCountFiles(
+        onCountFileUpdateSharepointList(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointList
         );
-        onCountFilesFoldersOption2(
+        onProgressFiles(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
+        onCountFileUpdateFoldersOption2(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointList
@@ -305,6 +328,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           sharepointUrl,
           nameSharepointSite,
           "Update Progress Project Op2"
+        );
+        historyLog(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointSite,
+          `The Progress column was updated successfully in ${nameSharepointList}`
         );
       });
     }
@@ -373,7 +402,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return response.arrayBuffer();
       })
       .catch((error) => {
-        console.error("Error fetching file:", error);
+        console.error("Error:", error);
         return Promise.reject(error);
       });
   }
@@ -409,16 +438,14 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       )
       .then((response: SPHttpClientResponse) => {
         if (response.ok) {
-          console.log(`List '${listName}' exists.`);
-
           return true;
         } else {
-          console.log(`List '${listName}' does not exist.`);
+          console.log(`The list does not exist: ${listName}`);
           return false;
         }
       })
       .catch((error) => {
-        console.error("Error checking list existence:", error);
+        console.error("Error:", error);
         return false;
       });
   }
@@ -427,9 +454,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   private async createSharePointList(listName: string): Promise<any> {
     const listNameExists = await this.checkNameSharepointList(listName);
     if (listNameExists) {
-      console.log(`List '${listName}' exists.`);
-
-      alert(`${listName} already exists`);
+      console.log(`The list already exists: ${listName}`);
+      alert(`The list already exists: ${listName}`);
       return;
     }
     const body = JSON.stringify({
@@ -454,17 +480,23 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       )
       .then((response: SPHttpClientResponse) => {
         if (response.ok) {
-          console.log(`Created sharepoint list: ${listName}`);
-          alert(`Created sharepoint list: ${listName}`);
+          console.log(`The list was created successfully: ${listName}`);
+          alert(`The list was created successfully: ${listName}`);
+          historyLog(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointSite,
+            `The list was created successfully: ${listName}`
+          );
           return response.json();
         } else {
           return response.json().then((errorResponse) => {
-            console.error("Error response:", errorResponse);
+            console.error("Error:", errorResponse);
           });
         }
       })
       .catch((error) => {
-        console.error("Error creating:", error);
+        console.error("Error:", error);
       });
   }
 
@@ -479,7 +511,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       const data = await response.json();
       return data.value.map((field: { Title: string }) => field.Title);
     } else {
-      console.error("Error fetching columns.");
+      console.error("Error");
       return [];
     }
   }
@@ -492,7 +524,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const existingColumns = await this.getExistingColumns(listName);
 
     if (existingColumns.indexOf(columnNames) !== -1) {
-      console.log(`Column "${columnNames}" already exists.`);
+      console.log(`The columns were already exists: ${columnNames}`);
       return;
     }
 
@@ -519,16 +551,16 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       )
       .then((response: SPHttpClientResponse) => {
         if (response.ok) {
-          console.log(`New column created: ${columnNames}`);
+          console.log(`The columns were created successfully: ${columnNames}`);
           return response.json();
         } else {
           return response.json().then((errorResponse) => {
-            console.error("Error response:", errorResponse);
+            console.error("Error:", errorResponse);
           });
         }
       })
       .catch((error) => {
-        console.error("Error adding column:", error);
+        console.error("Error:", error);
       });
   }
 
@@ -591,9 +623,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     }
 
     if (!hasChanges && method === "MERGE") {
-      console.log(
-        `No changes detected for item with CustomID = ${itemData.CustomID}`
-      );
+      console.log("No items were changed");
       return;
     }
 
@@ -614,32 +644,58 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .then((response: SPHttpClientResponse) => {
         if (response.ok) {
           if (method === "POST") {
-            console.log(`Item created: CustomID = ${itemData.CustomID}`);
-            alert(`Item created: ${itemData.CustomID}`);
+            console.log(
+              `The item was created successfully: ${itemData.CustomID}`
+            );
+            alert(`The item was created successfully: ${itemData.CustomID}`);
+            historyLog(
+              this.context.spHttpClient,
+              sharepointUrl,
+              nameSharepointSite,
+              `The item was created successfully: ${itemData.CustomID}`
+            );
             if (createdFields.length > 0) {
-              console.log(`Created fields: ${createdFields.join(", ")}`);
+              `The column was created successfully: ${createdFields.join(
+                ", "
+              )}`;
             }
           } else if (method === "MERGE") {
-            console.log(`Item updated: CustomID = ${itemData.CustomID}`);
-            alert(`Item updated: ${itemData.CustomID}`);
+            console.log(
+              `The item was updated successfully: ${itemData.CustomID}`
+            );
+            alert(`The item was updated successfully: ${itemData.CustomID}`);
+            historyLog(
+              this.context.spHttpClient,
+              sharepointUrl,
+              nameSharepointSite,
+              `The item was updated successfully: ${itemData.CustomID}`
+            );
             if (updatedFields.length > 0) {
-              console.log(`Updated fields: ${updatedFields.join(", ")}`);
-              alert(`Updated fields: ${updatedFields.join(", ")}`);
+              console.log(
+                `The column was updated successfully: ${updatedFields.join(
+                  ", "
+                )}`
+              );
+              alert(
+                `The column was updated successfully: ${updatedFields.join(
+                  ", "
+                )}`
+              );
             }
           }
         } else {
           response
             .json()
             .then((errorResponse) => {
-              console.error("Error response:", errorResponse);
+              console.error("Error:", errorResponse);
             })
             .catch((jsonError) => {
-              console.error("Error parsing response:", jsonError);
+              console.error("Error:", jsonError);
             });
         }
       })
       .catch((error) => {
-        console.error("Error adding or updating item:", error);
+        console.error("Error:", error);
       });
   }
 
@@ -660,24 +716,27 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .post(deleteEndpoint, SPHttpClient.configurations.v1, optionsHTTP)
       .then((deleteResponse) => {
         if (deleteResponse.ok) {
-          console.log(`Item deleted from SharePoint: ${item.CustomID}`);
-          alert(`Item deleted from SharePoint: ${item.CustomID}`);
+          console.log(`The item was deleted successfully: ${item.CustomID}`);
+          alert(`The item was deleted successfully: ${item.CustomID}`);
+          historyLog(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointSite,
+            `The item was deleted successfully: ${item.CustomID}`
+          );
         } else {
           deleteResponse
             .json()
             .then((errorResponse) => {
-              console.error(
-                "Error response while deleting item from SharePoint:",
-                errorResponse
-              );
+              console.error("Error:", errorResponse);
             })
             .catch((jsonError) => {
-              console.error("Error parsing response:", jsonError);
+              console.error("Error:", jsonError);
             });
         }
       })
       .catch((error) => {
-        console.error("Error deleting item from SharePoint:", error);
+        console.error("Error", error);
       });
   }
 
@@ -704,7 +763,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                 nameSharepointList,
                 createColumn
               ).catch((error) => {
-                console.error(`Error adding column "${createColumn}":`, error);
+                console.error("Error:", error);
               });
             });
           }, Promise.resolve())
@@ -749,7 +808,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           )
           .then((response) => {
             if (!response.ok) {
-              console.log(`Failed to retrieve items: ${response.statusText}`);
+              console.log(`Error: ${response.statusText}`);
             }
             return response.json();
           })
@@ -805,7 +864,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return folderValues;
       })
       .catch((error) => {
-        console.error("Error fetching SharePoint list data:", error);
+        console.error("Error:", error);
       });
   }
 
@@ -845,7 +904,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                 // Tạo các thư mục con nhỏ hơn
                 const childFolders = childSubFolders[folder];
                 return childFolders.reduce((childPrevPromise, childFolder) => {
-                  const childFolderUrl = `${folderUrl}/${childFolder}`;
+                  const childFolderName = childFolder.name;
+                  const childFolderUrl = `${folderUrl}/${childFolderName}`;
                   arrayFolderUrl.push(childFolderUrl);
                   return childPrevPromise.then(() => {
                     return this.context.spHttpClient.post(
@@ -859,14 +919,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           });
         }, Promise.resolve());
       })
-      .then(() => {
-        console.log(
-          `Created subfolders: ${subFolderName} in: ProjectFolder/PROJECT`
-        );
-        alert(`Created subfolders: ${subFolderName} in: ProjectFolder/PROJECT`);
-      })
+
       .catch((error) => {
-        console.error("Error creating subfolder:", error);
+        console.error("Error", error);
       });
   }
 
@@ -881,8 +936,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
         return Promise.all(createSubFolder);
       })
+      .then(() => {
+        console.log("The folders were created successfully");
+        alert("The folders were created successfully");
+      })
       .catch((error) => {
-        console.error("Error processing folders and subfolders:", error);
+        console.error("Error", error);
       });
   }
 
@@ -908,11 +967,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
         return Promise.all(updatePromises);
       })
-      .then(() => {
-        console.log("Updated Nation column for all subfolders");
-      })
       .catch((error) => {
-        console.error("Error updating Nation column:", error);
+        console.error("Error:", error);
       });
   }
 

@@ -5,36 +5,38 @@ import {
 } from "@microsoft/sp-http";
 
 //Tên subfolders
-export const childSubFolders: { [key: string]: string[] } = {
+export const childSubFolders: {
+  [key: string]: { name: string; DocumentId: string }[];
+} = {
   Promotion: [
-    "Basic project data",
-    "Promotion activities",
-    "Reports",
-    "Project risk analysis",
-    "Stakeholder Management",
-    "Design Review 01 AS-ME",
-    "Client Contract Review (CCR)",
-    "Project Approval (EU-Kento)",
-    "Estimate Approval (EU-Kessai)",
+    { name: "Basic project data", DocumentId: "0100" },
+    { name: "Promotion activities", DocumentId: "0101" },
+    { name: "Project risk analysis", DocumentId: "0105" },
+    { name: "Stakeholder Management", DocumentId: "0107" },
+    { name: "Design Review 01 AS-ME", DocumentId: "0109" },
+    { name: "Client Contract Review (CCR)", DocumentId: "0111" },
+    { name: "Project Approval (EU-Kento)", DocumentId: "0113" },
+    { name: "Estimate Approval (EU-Kessai)", DocumentId: "0113" },
   ],
   Design: [
-    "Drawings",
-    "Funtion Checklist AS",
-    "Funtion Checklist ME",
-    "Designer Approval Request",
-    "Design Review 23 AS-ME",
+    { name: "Drawings", DocumentId: "2300" },
+    { name: "Funtion Checklist AS", DocumentId: "2301" },
+    { name: "Funtion Checklist ME", DocumentId: "2303" },
+    { name: "Designer Approval Request", DocumentId: "2305" },
+    { name: "Design Review 23 AS-ME", DocumentId: "2307" },
   ],
   Build: [
-    "Project outline",
-    "PM Policy",
-    "HSE risks (Health, Safely & Env.ment)",
-    "Funtion Checklist Update",
-    "Quality Plan",
-    "Schedule",
-    "Construction Kickoff",
+    { name: "Project outline", DocumentId: "4500" },
+    { name: "PM Policy", DocumentId: "4501" },
+    { name: "HSE risks (Health, Safely & Env.ment)", DocumentId: "4503" },
+    { name: "Funtion Checklist Update", DocumentId: "4504" },
+    { name: "Quality Plan", DocumentId: "4505" },
+    { name: "Schedule", DocumentId: "4506" },
+    { name: "Construction Kickoff", DocumentId: "4507" },
   ],
 };
 
+//Sharepoint-------------------------------------------------------------------------------------------------------------------------------------
 //Đọc sharepoint list
 const getDataFromSharepointList = (
   spHttpClient: SPHttpClient,
@@ -65,11 +67,10 @@ const getDataFromSharepointList = (
       return folderValues;
     })
     .catch((error) => {
-      console.error("Error fetching SharePoint list data:", error);
+      console.error("Error:", error);
     });
 };
 
-//Sharepoint-------------------------------------------------------------------------------------------------------------------------------------
 //Đếm file
 const countFiles = (
   spHttpClient: SPHttpClient,
@@ -90,7 +91,7 @@ const countFiles = (
       )
       .then((response) => {
         if (!response.ok) {
-          console.log(`HTTP error! Status: ${response.status}`);
+          console.log(`Error: ${response.status}`);
         }
         return response.json();
       })
@@ -108,7 +109,7 @@ const countFiles = (
         return { total, approved };
       })
       .catch((error) => {
-        console.error(`Error fetching files from ${countFolderUrl}:`, error);
+        console.error(`Error: ${countFolderUrl}`, error);
         return { total: 0, approved: 0 };
       });
   };
@@ -121,7 +122,7 @@ const countFiles = (
       0
     );
     const percentFiles =
-      totalFiles > 0 ? parseFloat((approvedFiles / totalFiles).toFixed(2)) : 0;
+      totalFiles > 0 ? parseFloat((approvedFiles / totalFiles).toFixed(4)) : 0;
     console.log(percentFiles);
 
     return { totalFiles, approvedFiles, percentFiles };
@@ -145,28 +146,28 @@ const getUrlCountFiles = (
   subFolders.forEach((folder) => {
     const folderUrl = `${subFolderUrl}/${folder}`;
     arrayFolderUrl.push(folderUrl);
-    ``;
     const childFolders = childSubFolders[folder];
     childFolders.forEach((childFolder) => {
-      const childFolderUrl = `${folderUrl}/${childFolder}`;
+      const childFolderName = childFolder.name;
+      const childFolderUrl = `${folderUrl}/${childFolderName}`;
       arrayFolderUrl.push(childFolderUrl);
     });
   });
 
   return countFiles(spHttpClient, sharepointUrl, arrayFolderUrl)
     .then(({ totalFiles, approvedFiles, percentFiles }) => {
-      console.log(`Total Files in ${subFolderName}: ${totalFiles}`);
-      console.log(`Approved Files in ${subFolderName}: ${approvedFiles}`);
+      console.log(`Total files in ${subFolderName}: ${totalFiles}`);
+      console.log(`Approved files in ${subFolderName}: ${approvedFiles}`);
       console.log(`Completion rate in ${subFolderName}: ${percentFiles}`);
       return { totalFiles, approvedFiles, percentFiles };
     })
     .catch((error) => {
-      console.error("Error counting files:", error);
+      console.error("Error:", error);
     });
 };
 
 //Update Progress lên sharepoint list
-const updateRateSharepoint = (
+const updateRateSharepointList = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string,
@@ -216,27 +217,22 @@ const updateRateSharepoint = (
           )
           .then((response) => {
             if (!response.ok) {
-              return response.text().then(() => {
-                Promise.reject(
-                  `Failed to update Progress for item ${itemId}: ${response.statusText}`
-                );
-              });
+              return Promise.reject(`Error ${subFolderName}`);
             }
-            console.log(
-              `All items updated completion rate in ${nameSharepointList}`
-            );
           });
+      } else {
+        return Promise.reject(
+          `No item found for ${nameSharepointList}: ${subFolderName}`
+        );
       }
-      return Promise.reject(`No item found for ProjectName: ${subFolderName}`);
     })
     .catch((error) => {
-      console.error("Error updating Progress value:", error);
       return Promise.reject(error);
     });
 };
 
 //Click đếm, update file
-export const onCountFiles = (
+export const onCountFileUpdateSharepointList = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string
@@ -254,7 +250,7 @@ export const onCountFiles = (
         updatePromises.push(
           getUrlCountFiles(spHttpClient, sharepointUrl, subFolderName).then(
             ({ percentFiles }) => {
-              return updateRateSharepoint(
+              return updateRateSharepointList(
                 spHttpClient,
                 sharepointUrl,
                 nameSharepointList,
@@ -268,12 +264,260 @@ export const onCountFiles = (
 
       return Promise.all(updatePromises);
     })
+    .then(() => {
+      console.log(
+        `The Progress column was updated successfully in ${nameSharepointList}`
+      );
+      alert(
+        `The Progress column was updated successfully in ${nameSharepointList}`
+      );
+    })
     .catch((error) => {
-      console.error("Error processing folders and subfolders:", error);
+      console.error("Error:", error);
     });
 };
 
-//Folder-----------------------------------------------------------------------------------------------------------------------------------------
+//Update Progress Promotion, Design và Build
+//Đếm file
+const progressFiles = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  folderUrls: string[]
+): Promise<{
+  totalFiles: number;
+  approvedFiles: number;
+  percentFiles: number;
+}> => {
+  const fetchFileCounts = (
+    folderUrl: string
+  ): Promise<{ total: number; approved: number }> => {
+    return spHttpClient
+      .get(
+        `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/Files`,
+        SPHttpClient.configurations.v1
+      )
+      .then((response) => {
+        if (!response.ok) {
+          console.log(`Error: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const files = data.value || [];
+        const total = files.length;
+        const approved = files.filter((file: any) => {
+          const fileNameWithoutExtension = file.Name.split(".")
+            .slice(0, -1)
+            .join(".");
+          return fileNameWithoutExtension.endsWith("Approved");
+        }).length;
+
+        return { total, approved };
+      })
+      .catch((error) => {
+        console.error(`Error: ${folderUrl}`, error);
+        return { total: 0, approved: 0 };
+      });
+  };
+
+  const folderPromises = folderUrls.map((url) => fetchFileCounts(url));
+  return Promise.all(folderPromises).then((results) => {
+    const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
+    const approvedFiles = results.reduce(
+      (sum, result) => sum + result.approved,
+      0
+    );
+    const percentFiles =
+      totalFiles > 0 ? parseFloat((approvedFiles / totalFiles).toFixed(4)) : 0;
+    return { totalFiles, approvedFiles, percentFiles };
+  });
+};
+
+//Lấy Url các thư mục
+const getUrlProgressFiles = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  subFolderName: string
+): Promise<{
+  Promotion: {
+    totalFiles: number;
+    approvedFiles: number;
+    percentFiles: number;
+  };
+  Design: {
+    totalFiles: number;
+    approvedFiles: number;
+    percentFiles: number;
+  };
+  Build: {
+    totalFiles: number;
+    approvedFiles: number;
+    percentFiles: number;
+  };
+}> => {
+  const subFolders = ["Promotion", "Design", "Build"];
+  const folderPromises = subFolders.map((parentFolder) => {
+    const childFolders = childSubFolders[parentFolder];
+    const folderUrls = childFolders.map(
+      (child) =>
+        `ProjectFolder/PROJECT/${subFolderName}/${parentFolder}/${child.name}`
+    );
+
+    return progressFiles(spHttpClient, sharepointUrl, folderUrls).then(
+      ({ totalFiles, approvedFiles }) => ({
+        parentFolder,
+        totalFiles,
+        approvedFiles,
+      })
+    );
+  });
+
+  return Promise.all(folderPromises).then((results) => {
+    const progressMap: {
+      Promotion: {
+        totalFiles: number;
+        approvedFiles: number;
+        percentFiles: number;
+      };
+      Design: {
+        totalFiles: number;
+        approvedFiles: number;
+        percentFiles: number;
+      };
+      Build: {
+        totalFiles: number;
+        approvedFiles: number;
+        percentFiles: number;
+      };
+    } = {
+      Promotion: { totalFiles: 0, approvedFiles: 0, percentFiles: 0 },
+      Design: { totalFiles: 0, approvedFiles: 0, percentFiles: 0 },
+      Build: { totalFiles: 0, approvedFiles: 0, percentFiles: 0 },
+    };
+
+    results.forEach(({ parentFolder, totalFiles, approvedFiles }) => {
+      // Cộng tổng số file và file đã Approved cho từng thư mục cha
+      progressMap[parentFolder as keyof typeof progressMap].totalFiles +=
+        totalFiles;
+      progressMap[parentFolder as keyof typeof progressMap].approvedFiles +=
+        approvedFiles;
+    });
+
+    // Tính tỷ lệ phần trăm Approved cho từng thư mục cha
+    Object.keys(progressMap).forEach((key) => {
+      const folderKey = key as keyof typeof progressMap;
+      const total = progressMap[folderKey].totalFiles;
+      const approved = progressMap[folderKey].approvedFiles;
+      progressMap[folderKey].percentFiles =
+        total > 0 ? parseFloat((approved / total).toFixed(4)) : 0;
+    });
+
+    return progressMap;
+  });
+};
+
+//Update Progress lên sharepoint list
+const updateProgressSharepointList = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  nameSharepointList: string,
+  subFolderName: string,
+  progressData: {
+    Promotion: { percentFiles: number };
+    Design: { percentFiles: number };
+    Build: { percentFiles: number };
+  }
+): Promise<any> => {
+  return spHttpClient
+    .get(
+      `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=ProjectName eq '${subFolderName}'&$select=ID,ProjectName`,
+      SPHttpClient.configurations.v1
+    )
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.value && data.value.length > 0) {
+        const item = data.value[0];
+        const itemId = item.ID;
+
+        const body = JSON.stringify({
+          __metadata: {
+            type: `SP.Data.${nameSharepointList}ListItem`,
+          },
+          ProgressPromotion: progressData.Promotion.percentFiles,
+          ProgressDesign: progressData.Design.percentFiles,
+          ProgressBuild: progressData.Build.percentFiles,
+        });
+
+        const optionsHTTP: ISPHttpClientOptions = {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "odata-version": "",
+            "If-Match": "*",
+            "X-HTTP-Method": "MERGE",
+          },
+          body,
+        };
+        return spHttpClient
+          .post(
+            `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})`,
+            SPHttpClient.configurations.v1,
+            optionsHTTP
+          )
+          .then((response) => {
+            if (!response.ok) {
+              return Promise.reject(`Error updating ${subFolderName}`);
+            }
+          });
+      } else {
+        return Promise.reject(`No item found for ${subFolderName}`);
+      }
+    });
+};
+
+//Click đếm, update file
+export const onProgressFiles = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  nameSharepointList: string
+): Promise<any> => {
+  return getDataFromSharepointList(
+    spHttpClient,
+    sharepointUrl,
+    nameSharepointList
+  )
+    .then((folderPairs) => {
+      const subFolder = folderPairs.map(({ subFolderName }) => subFolderName);
+      const updatePromises: Promise<any>[] = [];
+
+      subFolder.forEach((subFolderName) => {
+        updatePromises.push(
+          getUrlProgressFiles(spHttpClient, sharepointUrl, subFolderName).then(
+            (progress) => {
+              return updateProgressSharepointList(
+                spHttpClient,
+                sharepointUrl,
+                nameSharepointList,
+                subFolderName,
+                progress
+              );
+            }
+          )
+        );
+      });
+      return Promise.all(updatePromises);
+    })
+    .then(() => {
+      console.log(
+        `The ProgressPromotion, ProgressDesign and ProgressBuild were updated successfully in ${nameSharepointList}`
+      );
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
+};
+
+//Project Folder----------------------------------------------------------------------------------------------------------------------------------
 //Đếm files
 //Option1
 const countFilesFolders = (
@@ -295,9 +539,7 @@ const countFilesFolders = (
       )
       .then((response) => {
         if (!response.ok) {
-          console.warn(
-            `HTTP error! Status: ${response.status} for ${countFolderUrl}`
-          );
+          console.warn(`Error: ${response.status} for ${countFolderUrl}`);
           return { total: 0, approved: 0 };
         }
         return response.json();
@@ -310,7 +552,7 @@ const countFilesFolders = (
         return { total: files.length, approved };
       })
       .catch((error) => {
-        console.error(`Error fetching files from ${countFolderUrl}:`, error);
+        console.error(`Error: ${countFolderUrl}`, error);
         return { total: 0, approved: 0 };
       });
   };
@@ -332,7 +574,7 @@ const countFilesFolders = (
       };
     })
     .catch((error) => {
-      console.error("Error processing folders:", error);
+      console.error("Error:", error);
       return {
         totalFiles: "0",
         approvedFiles: "0",
@@ -361,9 +603,7 @@ const countFilesFoldersOption2 = (
       )
       .then((response) => {
         if (!response.ok) {
-          console.warn(
-            `HTTP error! Status: ${response.status} for ${countFolderUrl}`
-          );
+          console.warn(`Error: ${response.status} for ${countFolderUrl}`);
           return { total: 0, approved: 0 };
         }
         return response.json();
@@ -376,7 +616,7 @@ const countFilesFoldersOption2 = (
         return { total: files.length, approved };
       })
       .catch((error) => {
-        console.error(`Error fetching files from ${countFolderUrl}:`, error);
+        console.error(`Error: ${countFolderUrl}`, error);
         return { total: 0, approved: 0 };
       });
   };
@@ -396,12 +636,12 @@ const countFilesFoldersOption2 = (
         approvedFiles: approvedFiles,
         percentFiles:
           totalFiles > 0
-            ? parseFloat((approvedFiles / totalFiles).toFixed(2))
+            ? parseFloat((approvedFiles / totalFiles).toFixed(4))
             : 0,
       };
     })
     .catch((error) => {
-      console.error("Error processing folders:", error);
+      console.error("Error:", error);
       return {
         totalFiles: 0,
         approvedFiles: 0,
@@ -427,32 +667,32 @@ const getUrlCountFilesFolders = (
     const baseFolderUrl = `ProjectFolder/PROJECT/${subFolderNames}/${folder}`;
     const childFolders = childSubFolders[folder];
 
-    childFolders.forEach((child) => {
-      const childFolderUrl = `${baseFolderUrl}/${child}`;
-      //Đếm file trong thư mục này và cập nhật Approved
+    childFolders.forEach((childFolder) => {
+      const childFolderName = childFolder.name;
+      const childFolderUrl = `${baseFolderUrl}/${childFolderName}`;
+      const documentId = childFolder.DocumentId;
       const countAndUpdate = countFilesFolders(spHttpClient, sharepointUrl, [
         childFolderUrl,
       ])
         .then(({ percentFiles }) => {
-          console.log(`Updating folder: ${childFolderUrl}: ${percentFiles}`);
+          console.log(`The Progress: ${childFolderUrl}: ${percentFiles}`);
           return updateFolderApprovedFolders(
             spHttpClient,
             sharepointUrl,
             percentFiles,
-            childFolderUrl
+            childFolderUrl,
+            documentId
           );
         })
         .catch((error) => {
-          console.error(`Error updating folder ${childFolderUrl}:`, error);
+          console.error(`Error ${childFolderUrl}:`, error);
         });
 
       updatePromises.push(countAndUpdate);
     });
   });
 
-  return Promise.all(updatePromises).then(() => {
-    console.log(`All updates for ${subFolderNames} completed`);
-  });
+  return Promise.all(updatePromises).then(() => {});
 };
 
 //Option2
@@ -471,34 +711,34 @@ const getUrlCountFilesFoldersOption2 = (
     const baseFolderUrl = `ProjectFolder/PROJECT/${subFolderNames}/${folder}`;
     const childFolders = childSubFolders[folder];
 
-    childFolders.forEach((child) => {
-      const childFolderUrl = `${baseFolderUrl}/${child}`;
-      //Đếm file trong thư mục này và cập nhật Approved
+    childFolders.forEach((childFolder) => {
+      const childFolderName = childFolder.name;
+      const childFolderUrl = `${baseFolderUrl}/${childFolderName}`;
+      const documentId = childFolder.DocumentId;
       const countAndUpdate = countFilesFoldersOption2(
         spHttpClient,
         sharepointUrl,
         [childFolderUrl]
       )
         .then(({ percentFiles }) => {
-          console.log(`Updating folder: ${childFolderUrl}: ${percentFiles}`);
+          console.log(`The Progress: ${childFolderUrl}: ${percentFiles}`);
           return updateFolderApprovedFoldersOption2(
             spHttpClient,
             sharepointUrl,
             percentFiles,
-            childFolderUrl
+            childFolderUrl,
+            documentId
           );
         })
         .catch((error) => {
-          console.error(`Error updating folder ${childFolderUrl}:`, error);
+          console.error(`Error ${childFolderUrl}:`, error);
         });
 
       updatePromises.push(countAndUpdate);
     });
   });
 
-  return Promise.all(updatePromises).then(() => {
-    console.log(`All updates for ${subFolderNames} completed`);
-  });
+  return Promise.all(updatePromises).then(() => {});
 };
 
 //Update Progress cho thư mục
@@ -507,7 +747,8 @@ const updateFolderApprovedFolders = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   approvedValue: string,
-  folderUrl: string
+  folderUrl: string,
+  documentId: string
 ): Promise<any> => {
   return spHttpClient
     .get(
@@ -521,12 +762,13 @@ const updateFolderApprovedFolders = (
     )
     .then((data) => {
       if (!data.Id) {
-        console.error("Item ID not found");
         return Promise.reject("Item ID not found");
       }
+
       const body = JSON.stringify({
         __metadata: { type: "SP.ListItem" },
         ProgressOp1: approvedValue,
+        DocumentID: documentId,
       });
 
       const optionsHTTP: ISPHttpClientOptions = {
@@ -550,7 +792,7 @@ const updateFolderApprovedFolders = (
         optionsHTTP
       );
     })
-    .catch((error) => console.error("Error updating Approved column:", error));
+    .catch((error) => console.error("Error:", error));
 };
 
 //Option2
@@ -558,7 +800,8 @@ const updateFolderApprovedFoldersOption2 = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   approvedValue: number,
-  folderUrl: string
+  folderUrl: string,
+  documentId: string
 ): Promise<any> => {
   const requestUrl = `${sharepointUrl}/_api/web/getFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields`;
 
@@ -571,12 +814,12 @@ const updateFolderApprovedFoldersOption2 = (
     )
     .then((data) => {
       if (!data.Id) {
-        console.error("Item ID not found");
         return Promise.reject("Item ID not found");
       }
       const body = JSON.stringify({
         __metadata: { type: "SP.ListItem" },
         ProgressOp2: approvedValue,
+        DocumentID: documentId,
       });
 
       const optionsHTTP: ISPHttpClientOptions = {
@@ -600,12 +843,12 @@ const updateFolderApprovedFoldersOption2 = (
         optionsHTTP
       );
     })
-    .catch((error) => console.error("Error updating Approved column:", error));
+    .catch((error) => console.error("Error:", error));
 };
 
 //Click đếm file và update giá trị cột Approved vào Folder
 //Option1
-export const onCountFilesFolders = (
+export const onCountFileUpdateFolders = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string
@@ -626,17 +869,21 @@ export const onCountFilesFolders = (
       });
 
       return Promise.all(updatePromises).then(() => {
-        console.log("The number of files updated in Option 1");
-        alert("The number of files updated in Option 1");
+        console.log(
+          `The Progress column was updated successfully in ProjectFolder Option1`
+        );
+        alert(
+          `The Progress column was updated successfully in ProjectFolder Option1`
+        );
       });
     })
     .catch((error) => {
-      console.error("Error processing folders and subfolders:", error);
+      console.error("Error:", error);
     });
 };
 
 //Option2
-export const onCountFilesFoldersOption2 = (
+export const onCountFileUpdateFoldersOption2 = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string
@@ -660,12 +907,15 @@ export const onCountFilesFoldersOption2 = (
         );
       });
       return Promise.all(updatePromises).then(() => {
-        console.log("The number of files updated in Option 2");
-        alert("The number of files updated in Option 2");
+        console.log(
+          `The Progress column was updated successfully in ProjectFolder Option2`
+        );
+        alert(
+          `The Progress column was updated successfully in ProjectFolder Option2`
+        );
       });
     })
-
     .catch((error) => {
-      console.error("Error processing folders and subfolders:", error);
+      console.error("Error:", error);
     });
 };

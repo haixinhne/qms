@@ -31,18 +31,12 @@ export const updateNationColumn = (
     .then((response: SPHttpClientResponse) => {
       if (!response.ok) {
         return response.json().then((error) => {
-          return Promise.reject(
-            `Failed to update folder with status ${response.status}: ${error}`
-          );
+          return Promise.reject(`Error ${response.status}: ${error}`);
         });
       }
-      console.log(`Updated Nation and CustomId for ${subFolderName}`);
-      alert(`Updated Nation and CustomId for ${subFolderName}`);
+      console.log("The Nation column was updated successfully");
     })
     .catch((error) => {
-      console.error(
-        `Error updating folder property for folder: ${subFolderName}`,
-        error
-      );
+      console.error(`Error: ${subFolderName}`, error);
     });
 };
