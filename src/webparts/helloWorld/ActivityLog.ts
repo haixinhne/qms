@@ -1,6 +1,6 @@
 import { SPHttpClient, SPHttpClientResponse } from "@microsoft/sp-http";
 
-//Lấy tên user name
+//Hàm lấy tên user name
 export const getUserName = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string
@@ -14,8 +14,9 @@ export const getUserName = (
     .then((data) => data.Title);
 };
 
+//Activity-----------------------------------------------------------------------------------------------------------------------------------------
 //Hàm tạo nội dung khi click
-export const handleClick = (
+export const activityLog = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointSite: string,
@@ -85,7 +86,7 @@ export const handleClick = (
   });
 };
 
-//Hiển thị nội dung từ file Json
+//Hàm hiển thị nội dung từ file Json
 export const displayJsonContent = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -137,7 +138,7 @@ export const displayJsonContent = (
     .catch((error) => console.error("Error:", error));
 };
 
-//Hàm Save file json vào thư mục mỗi khi click vào 1 nút
+//Hàm save file json vào thư mục mỗi khi click vào 1 nút
 const saveJsonSharePoint = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -162,7 +163,7 @@ const saveJsonSharePoint = (
     });
 };
 
-//--------------------------------------------------------------------------------------------------------------------------------------------
+//History-----------------------------------------------------------------------------------------------------------------------------------------
 // Hàm tạo nội dung khi console.log
 export const historyLog = (
   spHttpClient: SPHttpClient,

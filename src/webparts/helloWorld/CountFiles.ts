@@ -37,7 +37,7 @@ export const childSubFolders: {
 };
 
 //Sharepoint-------------------------------------------------------------------------------------------------------------------------------------
-//Đọc sharepoint list
+//Hàm đọc sharepoint list
 const getDataFromSharepointList = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -71,7 +71,64 @@ const getDataFromSharepointList = (
     });
 };
 
-//Đếm file
+//Hàm đếm file
+// const countFiles = (
+//   spHttpClient: SPHttpClient,
+//   sharepointUrl: string,
+//   folderUrls: string[]
+// ): Promise<{
+//   totalFiles: number;
+//   approvedFiles: number;
+//   percentFiles: number;
+// }> => {
+//   const fetchFileCounts = (
+//     countFolderUrl: string
+//   ): Promise<{ total: number; approved: number }> => {
+//     return spHttpClient
+//       .get(
+//         `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
+//         SPHttpClient.configurations.v1
+//       )
+//       .then((response) => {
+//         if (!response.ok) {
+//           console.log(`Error: ${response.status}`);
+//         }
+//         return response.json();
+//       })
+//       .then((data) => {
+//         const files = data.value || [];
+//         const total = files.length;
+
+//         const approved = files.filter((file: any) => {
+//           const fileNameWithoutExtension = file.Name.split(".")
+//             .slice(0, -1)
+//             .join(".");
+//           return fileNameWithoutExtension.endsWith("Approved");
+//         }).length;
+
+//         return { total, approved };
+//       })
+//       .catch((error) => {
+//         console.error(`Error: ${countFolderUrl}`, error);
+//         return { total: 0, approved: 0 };
+//       });
+//   };
+
+//   const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); //Lặp qua các thư mục
+//   return Promise.all(loopFolders).then((results) => {
+//     const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
+//     const approvedFiles = results.reduce(
+//       (sum, result) => sum + result.approved,
+//       0
+//     );
+//     const percentFiles =
+//       totalFiles > 0 ? parseFloat((approvedFiles / totalFiles).toFixed(4)) : 0;
+//     console.log(percentFiles);
+
+//     return { totalFiles, approvedFiles, percentFiles };
+//   });
+// };
+
 const countFiles = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -86,7 +143,7 @@ const countFiles = (
   ): Promise<{ total: number; approved: number }> => {
     return spHttpClient
       .get(
-        `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
+        `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files?$expand=ListItemAllFields`,
         SPHttpClient.configurations.v1
       )
       .then((response) => {
@@ -99,12 +156,10 @@ const countFiles = (
         const files = data.value || [];
         const total = files.length;
 
-        const approved = files.filter((file: any) => {
-          const fileNameWithoutExtension = file.Name.split(".")
-            .slice(0, -1)
-            .join(".");
-          return fileNameWithoutExtension.endsWith("Approved");
-        }).length;
+        // Kiểm tra nếu cột "Choice" có giá trị là "Yes"
+        const approved = files.filter(
+          (file: any) => file.ListItemAllFields?.Testing === "Yes"
+        ).length;
 
         return { total, approved };
       })
@@ -114,7 +169,7 @@ const countFiles = (
       });
   };
 
-  const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); //Lặp qua các thư mục
+  const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); // Lặp qua các thư mục
   return Promise.all(loopFolders).then((results) => {
     const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
     const approvedFiles = results.reduce(
@@ -129,7 +184,7 @@ const countFiles = (
   });
 };
 
-//Lấy Url các thư mục
+//Hàm lấy url các thư mục
 const getUrlCountFiles = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -140,7 +195,7 @@ const getUrlCountFiles = (
   }
 
   const subFolderUrl = `ProjectFolder/PROJECT/${subFolderName}`;
-  const subFolders = ["Promotion", "Design", "Build"];
+  const subFolders = Object.keys(childSubFolders);
   const arrayFolderUrl: string[] = [];
 
   subFolders.forEach((folder) => {
@@ -166,7 +221,7 @@ const getUrlCountFiles = (
     });
 };
 
-//Update Progress lên sharepoint list
+//Hàm update Progress lên sharepoint list
 const updateRateSharepointList = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -278,7 +333,7 @@ export const onCountFileUpdateSharepointList = (
 };
 
 //Update Progress Promotion, Design và Build
-//Đếm file
+//Hàm đếm file
 const progressFiles = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -333,7 +388,7 @@ const progressFiles = (
   });
 };
 
-//Lấy Url các thư mục
+//Hàm lấy url các thư mục
 const getUrlProgressFiles = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -355,7 +410,7 @@ const getUrlProgressFiles = (
     percentFiles: number;
   };
 }> => {
-  const subFolders = ["Promotion", "Design", "Build"];
+  const subFolders = Object.keys(childSubFolders);
   const folderPromises = subFolders.map((parentFolder) => {
     const childFolders = childSubFolders[parentFolder];
     const folderUrls = childFolders.map(
@@ -396,14 +451,14 @@ const getUrlProgressFiles = (
     };
 
     results.forEach(({ parentFolder, totalFiles, approvedFiles }) => {
-      // Cộng tổng số file và file đã Approved cho từng thư mục cha
+      //Tổng số file và file đã Approved cho từng thư mục cha
       progressMap[parentFolder as keyof typeof progressMap].totalFiles +=
         totalFiles;
       progressMap[parentFolder as keyof typeof progressMap].approvedFiles +=
         approvedFiles;
     });
 
-    // Tính tỷ lệ phần trăm Approved cho từng thư mục cha
+    //Tỷ lệ phần trăm Approved cho từng thư mục cha
     Object.keys(progressMap).forEach((key) => {
       const folderKey = key as keyof typeof progressMap;
       const total = progressMap[folderKey].totalFiles;
@@ -416,7 +471,7 @@ const getUrlProgressFiles = (
   });
 };
 
-//Update Progress lên sharepoint list
+//Hàm update Progress Promotion, Design và Build lên sharepoint list
 const updateProgressSharepointList = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -518,7 +573,7 @@ export const onProgressFiles = (
 };
 
 //Project Folder----------------------------------------------------------------------------------------------------------------------------------
-//Đếm files
+//Hàm đếm files
 //Option1
 const countFilesFolders = (
   spHttpClient: SPHttpClient,
@@ -650,7 +705,7 @@ const countFilesFoldersOption2 = (
     });
 };
 
-//Lấy Url các thư mục
+//Hàm lấy url các thư mục
 //Option1
 const getUrlCountFilesFolders = (
   spHttpClient: SPHttpClient,
@@ -741,7 +796,7 @@ const getUrlCountFilesFoldersOption2 = (
   return Promise.all(updatePromises).then(() => {});
 };
 
-//Update Progress cho thư mục
+//Hàm update Progress và DocumentID cho thư mục
 //Option1
 const updateFolderApprovedFolders = (
   spHttpClient: SPHttpClient,
@@ -846,7 +901,7 @@ const updateFolderApprovedFoldersOption2 = (
     .catch((error) => console.error("Error:", error));
 };
 
-//Click đếm file và update giá trị cột Approved vào Folder
+//Click đếm file và update giá trị cột Progress và DocumentID lên ProjectFolder
 //Option1
 export const onCountFileUpdateFolders = (
   spHttpClient: SPHttpClient,

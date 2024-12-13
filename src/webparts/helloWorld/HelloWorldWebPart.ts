@@ -6,7 +6,7 @@ import * as strings from "HelloWorldWebPartStrings";
 import * as XLSX from "xlsx";
 import { getIdGroup, manageRoles, manageRolesFolder } from "./SetPermissions";
 import {
-  handleClick,
+  activityLog,
   historyLog,
   getUserName,
   displayJsonContent,
@@ -122,11 +122,11 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     }
 
     //Event click button-------------------------------------------------------------------------------------------------------------------------
-    //Tạo sharepoint
+    //Event tạo sharepoint
     if (clickCreateSharepoint) {
       clickCreateSharepoint.addEventListener("click", () => {
         this.onClickButtonCreateSharepoint();
-        handleClick(
+        activityLog(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
@@ -135,11 +135,11 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
     }
 
-    //Tạo folder
+    //Event tạo folder
     if (clickCreateFolder) {
       clickCreateFolder.addEventListener("click", () => {
         this.onCreateFolder();
-        handleClick(
+        activityLog(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
@@ -149,8 +149,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
     }
 
-    //Set Permissions
-    //Folder
+    //Event set permissions
+    //Set permissions folder
     if (setFolderPermissions) {
       setFolderPermissions.addEventListener("click", () => {
         this.getDataFromSharePointList().then((folderData) => {
@@ -209,7 +209,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               console.error("Error:", error);
             });
 
-          handleClick(
+          activityLog(
             this.context.spHttpClient,
             sharepointUrl,
             nameSharepointSite,
@@ -219,7 +219,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
     }
 
-    //Sharepoint list
+    //Set permissions sharepoint list
     if (setListPermissions) {
       setListPermissions.addEventListener("click", () => {
         getIdGroup(this.context.spHttpClient, sharepointUrl);
@@ -264,7 +264,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             );
           });
 
-        handleClick(
+        activityLog(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
@@ -273,7 +273,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
     }
 
-    //Count files
+    //Event count files
     if (clickCountFilesOp1) {
       clickCountFilesOp1.addEventListener("click", () => {
         onCountFileUpdateSharepointList(
@@ -291,7 +291,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           sharepointUrl,
           nameSharepointList
         );
-        handleClick(
+        activityLog(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
@@ -323,7 +323,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           sharepointUrl,
           nameSharepointList
         );
-        handleClick(
+        activityLog(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointSite,
@@ -390,8 +390,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       .catch(() => {});
   }
 
-  //Tạo sharepoint list từ excel, add, update, xóa items từ sharepoint---------------------------------------------------------------------------
-  //Lấy file excel
+  //Tạo sharepoint list từ excel - add, update, xóa items sharepoint list---------------------------------------------------------------------------
+  //Hàm đọc file excel
   private getFileExcelFromSharePoint(excelUrl: string): Promise<ArrayBuffer> {
     return this.context.spHttpClient
       .get(
@@ -407,7 +407,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Đọc nội dung file excel (lấy tên các cột)
+  //Hàm đọc nội dung file excel để lấy tên các cột và items
   private readFileExcelFromSharePoint(fileContent: ArrayBuffer): {
     nameColumnSharepoint: string[];
     nameItems: Record<string, any>[];
@@ -429,142 +429,127 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     return { nameColumnSharepoint, nameItems };
   }
 
-  //Check sharepoint list đã tồn tại
-  private checkNameSharepointList(listName: string): Promise<boolean> {
+  //Hàm tạo sharepoint list
+  private async createSharePointList(listName: string): Promise<any> {
     return this.context.spHttpClient
       .get(
         `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')`,
         SPHttpClient.configurations.v1
       )
-      .then((response: SPHttpClientResponse) => {
-        if (response.ok) {
-          return true;
-        } else {
-          console.log(`The list does not exist: ${listName}`);
-          return false;
+      .then((checkResponse) => {
+        if (checkResponse.ok) {
+          console.log(`The list already exists: ${listName}`);
+          alert(`The list already exists: ${listName}`);
+          return;
         }
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        return false;
-      });
-  }
 
-  //Tạo sharepoint list
-  private async createSharePointList(listName: string): Promise<any> {
-    const listNameExists = await this.checkNameSharepointList(listName);
-    if (listNameExists) {
-      console.log(`The list already exists: ${listName}`);
-      alert(`The list already exists: ${listName}`);
-      return;
-    }
-    const body = JSON.stringify({
-      __metadata: { type: "SP.List" },
-      BaseTemplate: 100,
-      Title: listName,
-    });
-    const optionsHTTP: ISPHttpClientOptions = {
-      headers: {
-        Accept: "application/json;odata=verbose",
-        "Content-Type": "application/json;odata=verbose",
-        "odata-version": "",
-      },
-      body: body,
-    };
+        const body = JSON.stringify({
+          __metadata: { type: "SP.List" },
+          BaseTemplate: 100,
+          Title: listName,
+        });
 
-    return this.context.spHttpClient
-      .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/lists`,
-        SPHttpClient.configurations.v1,
-        optionsHTTP
-      )
-      .then((response: SPHttpClientResponse) => {
-        if (response.ok) {
-          console.log(`The list was created successfully: ${listName}`);
-          alert(`The list was created successfully: ${listName}`);
-          historyLog(
-            this.context.spHttpClient,
-            sharepointUrl,
-            nameSharepointSite,
-            `The list was created successfully: ${listName}`
-          );
-          return response.json();
-        } else {
-          return response.json().then((errorResponse) => {
-            console.error("Error:", errorResponse);
+        const optionsHTTP: ISPHttpClientOptions = {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "odata-version": "",
+          },
+          body: body,
+        };
+
+        return this.context.spHttpClient
+          .post(
+            `${this.context.pageContext.web.absoluteUrl}/_api/web/lists`,
+            SPHttpClient.configurations.v1,
+            optionsHTTP
+          )
+          .then((createResponse) => {
+            if (createResponse.ok) {
+              console.log(`The list was created successfully: ${listName}`);
+              alert(`The list was created successfully: ${listName}`);
+              historyLog(
+                this.context.spHttpClient,
+                sharepointUrl,
+                nameSharepointSite,
+                `The list was created successfully: ${listName}`
+              );
+            } else {
+              return createResponse.json().then((errorResponse) => {
+                console.error("Error creating list:", errorResponse);
+              });
+            }
           });
-        }
       })
       .catch((error) => {
         console.error("Error:", error);
       });
   }
 
-  //Check các cột đã tồn tại ở sharepoint
-  private async getExistingColumns(listName: string): Promise<string[]> {
-    const response = await this.context.spHttpClient.get(
-      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/fields?$select=Title`,
-      SPHttpClient.configurations.v1
-    );
-
-    if (response.ok) {
-      const data = await response.json();
-      return data.value.map((field: { Title: string }) => field.Title);
-    } else {
-      console.error("Error");
-      return [];
-    }
-  }
-
-  //Tạo cột sharepoint list
-  private async createColumnInSharePoint(
+  //Hàm tạo cột sharepoint list
+  private async createColumnInSharepointList(
     listName: string,
-    columnNames: string
+    columnName: string
   ): Promise<any> {
-    const existingColumns = await this.getExistingColumns(listName);
-
-    if (existingColumns.indexOf(columnNames) !== -1) {
-      console.log(`The columns were already exists: ${columnNames}`);
-      return;
-    }
-
-    const body = JSON.stringify({
-      __metadata: { type: "SP.Field" },
-      Title: columnNames,
-      FieldTypeKind: 2,
-    });
-
-    const optionsHTTP: ISPHttpClientOptions = {
-      headers: {
-        Accept: "application/json;odata=verbose",
-        "Content-Type": "application/json;odata=verbose",
-        "odata-version": "",
-      },
-      body: body,
-    };
-
-    return await this.context.spHttpClient
-      .post(
-        `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/fields`,
-        SPHttpClient.configurations.v1,
-        optionsHTTP
+    return this.context.spHttpClient
+      .get(
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/fields?$select=Title`,
+        SPHttpClient.configurations.v1
       )
-      .then((response: SPHttpClientResponse) => {
-        if (response.ok) {
-          console.log(`The columns were created successfully: ${columnNames}`);
-          return response.json();
-        } else {
-          return response.json().then((errorResponse) => {
-            console.error("Error:", errorResponse);
-          });
+      .then((response) => {
+        if (!response.ok) {
+          console.error("Error fetching existing columns.");
+          return [];
         }
+        return response
+          .json()
+          .then((data) =>
+            data.value.map((field: { Title: string }) => field.Title)
+          );
+      })
+      .then((existingColumns) => {
+        if (existingColumns.indexOf(columnName) !== -1) {
+          console.log(`The column already exists: ${columnName}`);
+          return;
+        }
+
+        const body = JSON.stringify({
+          __metadata: { type: "SP.Field" },
+          Title: columnName,
+          FieldTypeKind: 2,
+        });
+
+        const optionsHTTP: ISPHttpClientOptions = {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "odata-version": "",
+          },
+          body: body,
+        };
+
+        return this.context.spHttpClient
+          .post(
+            `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/fields`,
+            SPHttpClient.configurations.v1,
+            optionsHTTP
+          )
+          .then((createResponse) => {
+            if (createResponse.ok) {
+              console.log(`The column was created successfully: ${columnName}`);
+            } else {
+              return createResponse.json().then((errorResponse) => {
+                console.error("Error:", errorResponse);
+              });
+            }
+          });
       })
       .catch((error) => {
         console.error("Error:", error);
       });
   }
 
-  //Tạo items, update items
+  //Hàm tạo items, update items
   private async createItemsInSharePointList(
     listName: string,
     itemData: any
@@ -584,7 +569,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const saveExistingItem = existingItems.value && existingItems.value[0];
 
     let endpoint = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items`;
-    let method = "POST"; // default là để tạo mới
+    let method = "POST"; //tạo mới
 
     if (saveExistingItem) {
       endpoint += `(${saveExistingItem.Id})`;
@@ -601,7 +586,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     let hasChanges = false;
     let createdFields: string[] = [];
     let updatedFields: string[] = [];
-    //Lặp qua các itemData để xem các thay đổi (True-False)
+
+    //Kiểm tra các thay đổi (true-false)
     for (const key in itemData) {
       if (itemData.hasOwnProperty(key)) {
         const newValue = String(itemData[key] || "");
@@ -699,7 +685,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Xóa Items ở SharePoint list
+  //Hàm xóa items ở sharepoint list
   private deleteItemFromSharePoint(listName: string, item: any): void {
     const deleteEndpoint = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items(${item.Id})`;
     const optionsHTTP: ISPHttpClientOptions = {
@@ -740,13 +726,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Click Tạo sharepoint list, tạo cột, tạo mới, update, xóa items
+  //Event tạo sharepoint list, tạo - update - xóa items
   private onClickButtonCreateSharepoint(): void {
     if (!nameSharepointList) {
       alert("Please enter a name for the SharePoint list!");
       return;
     }
-    //Tạo sharepoint list
     this.createSharePointList(nameSharepointList)
       .then(() => {
         nameSharepointList;
@@ -759,7 +744,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return nameColumnSharepoint
           .reduce((promise, createColumn) => {
             return promise.then(() => {
-              return this.createColumnInSharePoint(
+              return this.createColumnInSharepointList(
                 nameSharepointList,
                 createColumn
               ).catch((error) => {
@@ -829,7 +814,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Tạo các thư mục từ sharepoint list-------------------------------------------------------------------------------------------------------------
+  //Tạo các folder từ sharepoint list-------------------------------------------------------------------------------------------------------------
   //Hàm lấy data từ sharepoint list
   private getDataFromSharePointList(): Promise<
     { folderName: string; subFolderName: string; customId: string }[]
@@ -868,7 +853,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  // Hàm tạo subfolder
+  //Hàm tạo subfolder
   private createSubfolder(subFolderName: string): Promise<any> {
     const optionsHTTP: ISPHttpClientOptions = {
       headers: {
@@ -925,7 +910,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Click tạo folder
+  //Event tạo folder
   private onCreateFolder(): Promise<any> {
     return this.getDataFromSharePointList()
       .then((folderPairs) => {
@@ -945,7 +930,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Update cột Nation ---------------------------------------------------------------------------------------------------------------------------
+  //Event update cột Nation ---------------------------------------------------------------------------------------------------------------------------
   private onUpdateNationColumn(): Promise<any> {
     return this.getDataFromSharePointList()
       .then((folderValues) => {
@@ -972,7 +957,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Defaults-------------------------------------------------------------------------------------------------------------------------------------------------------
+  //Defaults-----------------------------------------------------------------------------------------------------------------------------------
   private getEnvironmentMessage(): Promise<string> {
     if (!!this.context.sdks.microsoftTeams) {
       //running in Teams, office.com or Outlook
