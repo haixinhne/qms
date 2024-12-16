@@ -91,7 +91,6 @@ export const manageRoles = (
     })
     .then(() => {
       console.log("The list permissions were set successfully");
-      alert("The list permissions were set successfully");
     })
     .catch((error) => console.error(`Error: ${nameItems}`, error));
 };

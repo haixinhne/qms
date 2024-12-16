@@ -156,9 +156,9 @@ const countFiles = (
         const files = data.value || [];
         const total = files.length;
 
-        // Kiểm tra nếu cột "Choice" có giá trị là "Yes"
+        // Kiểm tra nếu cột Status có giá trị là "Approved"
         const approved = files.filter(
-          (file: any) => file.ListItemAllFields?.Testing === "Yes"
+          (file: any) => file.ListItemAllFields?.Status === "Approved"
         ).length;
 
         return { total, approved };
