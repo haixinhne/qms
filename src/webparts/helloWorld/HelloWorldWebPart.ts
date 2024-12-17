@@ -938,19 +938,56 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           return Promise.reject("No folder data found");
         }
 
-        const updatePromises = folderValues.map(
-          ({ folderName, subFolderName, customId }) => {
-            return updateNationColumn(
+        const updatePromises: Promise<void>[] = [];
+
+        folderValues.forEach(({ folderName, subFolderName, customId }) => {
+          updatePromises.push(
+            updateNationColumn(
               this.context.spHttpClient,
               sharepointUrl,
               subFolderName,
               folderName,
               customId
-            );
+            )
+          );
+
+          //
+          if (childSubFolders) {
+            Object.keys(childSubFolders).forEach((parentKey) => {
+              updatePromises.push(
+                updateNationColumn(
+                  this.context.spHttpClient,
+                  sharepointUrl,
+                  `${subFolderName}/${parentKey}`,
+                  folderName,
+                  customId
+                )
+              );
+
+              //
+              childSubFolders[parentKey].forEach((child) => {
+                const childSubFolderUrl = `${subFolderName}/${parentKey}/${child.name}`;
+
+                updatePromises.push(
+                  updateNationColumn(
+                    this.context.spHttpClient,
+                    sharepointUrl,
+                    childSubFolderUrl,
+                    folderName,
+                    customId
+                  )
+                );
+              });
+            });
           }
-        );
+        });
 
         return Promise.all(updatePromises);
+      })
+      .then(() => {
+        console.log(
+          "The Nation column was updated successfully in ProjectFolder"
+        );
       })
       .catch((error) => {
         console.error("Error:", error);

@@ -34,9 +34,8 @@ export const updateNationColumn = (
           return Promise.reject(`Error ${response.status}: ${error}`);
         });
       }
-      console.log("The Nation column was updated successfully");
     })
     .catch((error) => {
-      console.error(`Error: ${subFolderName}`, error);
+      console.error("Error:", error);
     });
 };

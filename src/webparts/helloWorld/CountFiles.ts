@@ -129,6 +129,7 @@ const getDataFromSharepointList = (
 //   });
 // };
 
+//op2
 const countFiles = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -156,7 +157,6 @@ const countFiles = (
         const files = data.value || [];
         const total = files.length;
 
-        // Kiểm tra nếu cột Status có giá trị là "Approved"
         const approved = files.filter(
           (file: any) => file.ListItemAllFields?.Status === "Approved"
         ).length;
@@ -169,7 +169,7 @@ const countFiles = (
       });
   };
 
-  const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); // Lặp qua các thư mục
+  const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); //Lặp qua các thư mục
   return Promise.all(loopFolders).then((results) => {
     const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
     const approvedFiles = results.reduce(
@@ -334,6 +334,61 @@ export const onCountFileUpdateSharepointList = (
 
 //Update Progress Promotion, Design và Build
 //Hàm đếm file
+// const progressFiles = (
+//   spHttpClient: SPHttpClient,
+//   sharepointUrl: string,
+//   folderUrls: string[]
+// ): Promise<{
+//   totalFiles: number;
+//   approvedFiles: number;
+//   percentFiles: number;
+// }> => {
+//   const fetchFileCounts = (
+//     folderUrl: string
+//   ): Promise<{ total: number; approved: number }> => {
+//     return spHttpClient
+//       .get(
+//         `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/Files`,
+//         SPHttpClient.configurations.v1
+//       )
+//       .then((response) => {
+//         if (!response.ok) {
+//           console.log(`Error: ${response.status}`);
+//         }
+//         return response.json();
+//       })
+//       .then((data) => {
+//         const files = data.value || [];
+//         const total = files.length;
+//         const approved = files.filter((file: any) => {
+//           const fileNameWithoutExtension = file.Name.split(".")
+//             .slice(0, -1)
+//             .join(".");
+//           return fileNameWithoutExtension.endsWith("Approved");
+//         }).length;
+
+//         return { total, approved };
+//       })
+//       .catch((error) => {
+//         console.error(`Error: ${folderUrl}`, error);
+//         return { total: 0, approved: 0 };
+//       });
+//   };
+
+//   const folderPromises = folderUrls.map((url) => fetchFileCounts(url));
+//   return Promise.all(folderPromises).then((results) => {
+//     const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
+//     const approvedFiles = results.reduce(
+//       (sum, result) => sum + result.approved,
+//       0
+//     );
+//     const percentFiles =
+//       totalFiles > 0 ? parseFloat((approvedFiles / totalFiles).toFixed(4)) : 0;
+//     return { totalFiles, approvedFiles, percentFiles };
+//   });
+// };
+
+//op2
 const progressFiles = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -348,7 +403,7 @@ const progressFiles = (
   ): Promise<{ total: number; approved: number }> => {
     return spHttpClient
       .get(
-        `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/Files`,
+        `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/Files?$expand=ListItemAllFields`,
         SPHttpClient.configurations.v1
       )
       .then((response) => {
@@ -360,12 +415,10 @@ const progressFiles = (
       .then((data) => {
         const files = data.value || [];
         const total = files.length;
-        const approved = files.filter((file: any) => {
-          const fileNameWithoutExtension = file.Name.split(".")
-            .slice(0, -1)
-            .join(".");
-          return fileNameWithoutExtension.endsWith("Approved");
-        }).length;
+
+        const approved = files.filter(
+          (file: any) => file.ListItemAllFields?.Status === "Approved"
+        ).length;
 
         return { total, approved };
       })
@@ -575,6 +628,70 @@ export const onProgressFiles = (
 //Project Folder----------------------------------------------------------------------------------------------------------------------------------
 //Hàm đếm files
 //Option1
+// const countFilesFolders = (
+//   spHttpClient: SPHttpClient,
+//   sharepointUrl: string,
+//   folderUrls: string[]
+// ): Promise<{
+//   totalFiles: string;
+//   approvedFiles: string;
+//   percentFiles: string;
+// }> => {
+//   const fetchFileCounts = (
+//     countFolderUrl: string
+//   ): Promise<{ total: number; approved: number }> => {
+//     return spHttpClient
+//       .get(
+//         `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
+//         SPHttpClient.configurations.v1
+//       )
+//       .then((response) => {
+//         if (!response.ok) {
+//           console.warn(`Error: ${response.status} for ${countFolderUrl}`);
+//           return { total: 0, approved: 0 };
+//         }
+//         return response.json();
+//       })
+//       .then((data) => {
+//         const files = data.value || [];
+//         const approved = files.filter((file: any) =>
+//           file.Name.split(".").slice(0, -1).join(".").endsWith("Approved")
+//         ).length;
+//         return { total: files.length, approved };
+//       })
+//       .catch((error) => {
+//         console.error(`Error: ${countFolderUrl}`, error);
+//         return { total: 0, approved: 0 };
+//       });
+//   };
+
+//   return Promise.all(folderUrls.map(fetchFileCounts))
+//     .then((results) => {
+//       const { totalFiles, approvedFiles } = results.reduce(
+//         (acc, result) => ({
+//           totalFiles: acc.totalFiles + result.total,
+//           approvedFiles: acc.approvedFiles + result.approved,
+//         }),
+//         { totalFiles: 0, approvedFiles: 0 }
+//       );
+
+//       return {
+//         totalFiles: totalFiles.toString(),
+//         approvedFiles: approvedFiles.toString(),
+//         percentFiles: totalFiles > 0 ? `${approvedFiles}/${totalFiles}` : "0/0",
+//       };
+//     })
+//     .catch((error) => {
+//       console.error("Error:", error);
+//       return {
+//         totalFiles: "0",
+//         approvedFiles: "0",
+//         percentFiles: "0/0",
+//       };
+//     });
+// };
+
+//op1
 const countFilesFolders = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -589,7 +706,7 @@ const countFilesFolders = (
   ): Promise<{ total: number; approved: number }> => {
     return spHttpClient
       .get(
-        `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
+        `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files?$expand=ListItemAllFields`,
         SPHttpClient.configurations.v1
       )
       .then((response) => {
@@ -601,9 +718,10 @@ const countFilesFolders = (
       })
       .then((data) => {
         const files = data.value || [];
-        const approved = files.filter((file: any) =>
-          file.Name.split(".").slice(0, -1).join(".").endsWith("Approved")
+        const approved = files.filter(
+          (file: any) => file.ListItemAllFields?.Status === "Approved"
         ).length;
+
         return { total: files.length, approved };
       })
       .catch((error) => {
@@ -639,6 +757,73 @@ const countFilesFolders = (
 };
 
 //Option2
+// const countFilesFoldersOption2 = (
+//   spHttpClient: SPHttpClient,
+//   sharepointUrl: string,
+//   folderUrls: string[]
+// ): Promise<{
+//   totalFiles: number;
+//   approvedFiles: number;
+//   percentFiles: number;
+// }> => {
+//   const fetchFileCounts = (
+//     countFolderUrl: string
+//   ): Promise<{ total: number; approved: number }> => {
+//     return spHttpClient
+//       .get(
+//         `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
+//         SPHttpClient.configurations.v1
+//       )
+//       .then((response) => {
+//         if (!response.ok) {
+//           console.warn(`Error: ${response.status} for ${countFolderUrl}`);
+//           return { total: 0, approved: 0 };
+//         }
+//         return response.json();
+//       })
+//       .then((data) => {
+//         const files = data.value || [];
+//         const approved = files.filter((file: any) =>
+//           file.Name.split(".").slice(0, -1).join(".").endsWith("Approved")
+//         ).length;
+//         return { total: files.length, approved };
+//       })
+//       .catch((error) => {
+//         console.error(`Error: ${countFolderUrl}`, error);
+//         return { total: 0, approved: 0 };
+//       });
+//   };
+
+//   return Promise.all(folderUrls.map(fetchFileCounts))
+//     .then((results) => {
+//       const { totalFiles, approvedFiles } = results.reduce(
+//         (acc, result) => ({
+//           totalFiles: acc.totalFiles + result.total,
+//           approvedFiles: acc.approvedFiles + result.approved,
+//         }),
+//         { totalFiles: 0, approvedFiles: 0 }
+//       );
+
+//       return {
+//         totalFiles: totalFiles,
+//         approvedFiles: approvedFiles,
+//         percentFiles:
+//           totalFiles > 0
+//             ? parseFloat((approvedFiles / totalFiles).toFixed(4))
+//             : 0,
+//       };
+//     })
+//     .catch((error) => {
+//       console.error("Error:", error);
+//       return {
+//         totalFiles: 0,
+//         approvedFiles: 0,
+//         percentFiles: 0,
+//       };
+//     });
+// };
+
+//op2
 const countFilesFoldersOption2 = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -653,7 +838,7 @@ const countFilesFoldersOption2 = (
   ): Promise<{ total: number; approved: number }> => {
     return spHttpClient
       .get(
-        `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files`,
+        `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${countFolderUrl}')/Files?$expand=ListItemAllFields`,
         SPHttpClient.configurations.v1
       )
       .then((response) => {
@@ -665,9 +850,10 @@ const countFilesFoldersOption2 = (
       })
       .then((data) => {
         const files = data.value || [];
-        const approved = files.filter((file: any) =>
-          file.Name.split(".").slice(0, -1).join(".").endsWith("Approved")
+        const approved = files.filter(
+          (file: any) => file.ListItemAllFields?.Status === "Approved"
         ).length;
+
         return { total: files.length, approved };
       })
       .catch((error) => {
