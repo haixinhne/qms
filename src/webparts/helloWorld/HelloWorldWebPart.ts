@@ -17,6 +17,7 @@ import {
   onProgressFiles,
   onCountFileUpdateFolders,
   onCountFileUpdateFoldersOption2,
+  onUpdateSubPhaseProgressSharepointList,
 } from "./CountFiles";
 
 import { updateNationColumn } from "./UpdateNation";
@@ -291,6 +292,11 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           sharepointUrl,
           nameSharepointList
         );
+        onUpdateSubPhaseProgressSharepointList(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
         activityLog(
           this.context.spHttpClient,
           sharepointUrl,
@@ -319,6 +325,11 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           nameSharepointList
         );
         onCountFileUpdateFoldersOption2(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
+        onUpdateSubPhaseProgressSharepointList(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointList
