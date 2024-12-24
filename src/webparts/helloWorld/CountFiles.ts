@@ -4,7 +4,7 @@ import {
   ISPHttpClientOptions,
 } from "@microsoft/sp-http";
 
-//Tên subfolders
+//Subfolders
 export const childSubFolders: {
   [key: string]: { name: string; DocumentId: string }[];
 } = {
@@ -65,7 +65,6 @@ const getDataFromSharepointList = (
               (i: any) => i.subFolderName === name.subFolderName
             ) === index
         );
-      console.log(folderValues);
       return folderValues;
     })
     .catch((error) => {
@@ -171,7 +170,7 @@ const progressFiles = (
       });
   };
 
-  const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url)); //Lặp qua các thư mục
+  const loopFolders = folderUrls.map((url: string) => fetchFileCounts(url));
   return Promise.all(loopFolders).then((results) => {
     const totalFiles = results.reduce((sum, result) => sum + result.total, 0);
     const approvedFiles = results.reduce(
@@ -320,11 +319,7 @@ export const onProgressSharepointList = (
 
       return Promise.all(updatePromises);
     })
-    .then(() => {
-      console.log(
-        `The Progress column was updated successfully in ${nameSharepointList}`
-      );
-    })
+    .then(() => {})
     .catch((error) => {
       console.error("Error:", error);
     });
@@ -615,33 +610,30 @@ export const onProgressPhaseSharepointList = (
       });
       return Promise.all(updatePromises);
     })
-    .then(() => {
-      console.log(
-        `The PhaseProgress column were updated successfully in ${nameSharepointList}`
-      );
-    })
+    .then(() => {})
     .catch((error) => {
       console.error("Error:", error);
     });
 };
 
 //Update Phase Sharepoint list-------------------------------------------
+//Hàm update
 const updateSubPhaseProgressSharepointList = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string,
-  subFolderNames: string,
+  customId: string,
   documentId: string,
   percentFiles: number
 ): Promise<void> => {
   return spHttpClient
     .get(
-      `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=ProjectName eq '${subFolderNames}'&$select=ID,ProjectName`,
+      `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=CustomID eq '${customId}'&$select=ID,CustomID`,
       SPHttpClient.configurations.v1
     )
     .then((response: SPHttpClientResponse) => {
       if (!response.ok) {
-        return Promise.reject("Failed to retrieve item for ProjectName");
+        return Promise.reject("Failed to retrieve item for CustomID");
       }
       return response.json();
     })
@@ -681,12 +673,9 @@ const updateSubPhaseProgressSharepointList = (
             if (!response.ok) {
               return Promise.reject("Error");
             }
-            console.log(
-              "The item was updated for the Phase column successfully"
-            );
           });
       } else {
-        return Promise.reject("No item found for ProjectName");
+        return Promise.reject("No item found for CustomID");
       }
     })
     .catch((error) => {
@@ -695,8 +684,76 @@ const updateSubPhaseProgressSharepointList = (
     });
 };
 
-//Event đếm, update file
-export const onSubProgressPhaseSharepointList = (
+//Hàm lấy url
+const getUrlSubPhaseProgress = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  subFolderName: string | string[],
+  customId: string
+): Promise<
+  {
+    subFolderNames: string[];
+    childFolderDocumentId: string;
+    percentFiles: number;
+  }[]
+> => {
+  const subFolderNames = Array.isArray(subFolderName)
+    ? subFolderName
+    : [subFolderName];
+  const subFolders = Object.keys(childSubFolders);
+  const updatePromises: Promise<{
+    subFolderNames: string[];
+    childFolderDocumentId: string;
+    percentFiles: number;
+  }>[] = [];
+
+  subFolders.forEach((folder) => {
+    const baseFolderUrl = `ProjectFolder/PROJECT/${subFolderNames}/${folder}`;
+    const childFolders = childSubFolders[folder];
+
+    childFolders.forEach((childFolder) => {
+      const childFolderName = childFolder.name;
+      const childFolderDocumentId = childFolder.DocumentId;
+      const childFolderUrl = `${baseFolderUrl}/${childFolderName}`;
+      const documentId = childFolder.DocumentId;
+
+      const countAndUpdate = progressFileFoldersOption2(
+        spHttpClient,
+        sharepointUrl,
+        [childFolderUrl]
+      )
+        .then(({ percentFiles }) => {
+          return updateProgressFileFoldersOption2(
+            spHttpClient,
+            sharepointUrl,
+            percentFiles,
+            childFolderUrl,
+            documentId
+          ).then(() => ({
+            subFolderNames,
+            childFolderDocumentId,
+            percentFiles,
+          }));
+        })
+        .catch((error) => {
+          console.error(`Error ${childFolderUrl}:`, error);
+
+          return {
+            subFolderNames,
+            childFolderDocumentId,
+            percentFiles: 0,
+          };
+        });
+
+      updatePromises.push(countAndUpdate);
+    });
+  });
+
+  return Promise.all(updatePromises);
+};
+
+//Event update
+export const onSubPhaseProgressSharepointList = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string
@@ -709,28 +766,28 @@ export const onSubProgressPhaseSharepointList = (
     .then((folderPairs) => {
       const updatePromises: Promise<void>[] = [];
 
-      folderPairs.forEach(({ subFolderName }) => {
+      folderPairs.forEach(({ subFolderName, customId }) => {
         updatePromises.push(
-          getUrlProgressFoldersOption2(
+          getUrlSubPhaseProgress(
             spHttpClient,
             sharepointUrl,
-            subFolderName
+            subFolderName,
+            customId
           ).then((results) => {
-            results.forEach(
-              ({ subFolderNames, childFolderDocumentId, percentFiles }) => {
-                const subFolderNameString = Array.isArray(subFolderNames)
-                  ? subFolderNames[0]
-                  : subFolderNames;
-                return updateSubPhaseProgressSharepointList(
-                  spHttpClient,
-                  sharepointUrl,
-                  nameSharepointList,
-                  subFolderNameString,
-                  childFolderDocumentId,
-                  percentFiles
-                );
-              }
-            );
+            results.forEach(({ childFolderDocumentId, percentFiles }) => {
+              console.log(
+                `CustomID:${customId}, SubFolderName:${subFolderName}, DocumentId:${childFolderDocumentId}, percentFiles:${percentFiles}`
+              );
+
+              return updateSubPhaseProgressSharepointList(
+                spHttpClient,
+                sharepointUrl,
+                nameSharepointList,
+                customId,
+                childFolderDocumentId,
+                percentFiles
+              );
+            });
           })
         );
       });
@@ -1295,11 +1352,7 @@ export const onProgressFolders = (
         );
       });
 
-      return Promise.all(updatePromises).then(() => {
-        console.log(
-          `The Progress column was updated successfully in ProjectFolder Option1`
-        );
-      });
+      return Promise.all(updatePromises).then(() => {});
     })
     .catch((error) => {
       console.error("Error:", error);
@@ -1378,15 +1431,11 @@ export const onProgressFoldersOption2 = (
             resultArray.forEach(
               ({ subFolderNames, childFolderDocumentId, percentFiles }) => {
                 console.log(
-                  `SubFolderNames: ${subFolderNames}, DocumentId: ${childFolderDocumentId}, PercentFiles: ${percentFiles}`
+                  `SubFolderName: ${subFolderNames}, DocumentId: ${childFolderDocumentId}, PercentFiles: ${percentFiles}`
                 );
               }
             );
           });
-
-          console.log(
-            `The Progress column was updated successfully in ProjectFolder Option2`
-          );
         })
         .catch((error) => {
           console.error("Error:", error);

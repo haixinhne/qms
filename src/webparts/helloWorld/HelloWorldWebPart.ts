@@ -17,7 +17,7 @@ import {
   onProgressPhaseSharepointList,
   onProgressFolders,
   onProgressFoldersOption2,
-  onSubProgressPhaseSharepointList,
+  onSubPhaseProgressSharepointList,
 } from "./CountFiles";
 
 import { updateNationColumn } from "./UpdateNation";
@@ -294,7 +294,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           sharepointUrl,
           nameSharepointList
         );
-        onSubProgressPhaseSharepointList(
+        onSubPhaseProgressSharepointList(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointList
@@ -333,7 +333,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           sharepointUrl,
           nameSharepointList
         );
-        onSubProgressPhaseSharepointList(
+        onSubPhaseProgressSharepointList(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointList
