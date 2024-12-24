@@ -36,7 +36,8 @@ export const childSubFolders: {
   ],
 };
 
-//Sharepoint-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//Sharepoint-Update progress, progress phase và phase lên Sharepoint list-------------------------------------------------------------------------------------------------
+//Update progress----------------------------------------------------------
 //Hàm đọc sharepoint list
 const getDataFromSharepointList = (
   spHttpClient: SPHttpClient,
@@ -64,6 +65,7 @@ const getDataFromSharepointList = (
               (i: any) => i.subFolderName === name.subFolderName
             ) === index
         );
+      console.log(folderValues);
       return folderValues;
     })
     .catch((error) => {
@@ -178,7 +180,6 @@ const progressFiles = (
     );
     const percentFiles =
       totalFiles > 0 ? parseFloat((approvedFiles / totalFiles).toFixed(4)) : 0;
-    console.log(percentFiles);
 
     return { totalFiles, approvedFiles, percentFiles };
   });
@@ -211,9 +212,9 @@ const getUrlProgressFiles = (
 
   return progressFiles(spHttpClient, sharepointUrl, arrayFolderUrl)
     .then(({ totalFiles, approvedFiles, percentFiles }) => {
-      console.log(`Total files in ${subFolderName}: ${totalFiles}`);
-      console.log(`Approved files in ${subFolderName}: ${approvedFiles}`);
-      console.log(`Completion progress in ${subFolderName}: ${percentFiles}`);
+      console.log(`Approved files in  ${subFolderName}  :  ${approvedFiles}`);
+      console.log(`Total files in     ${subFolderName}  :  ${totalFiles}`);
+      console.log(`Progress in        ${subFolderName}  :  ${percentFiles}`);
       return { totalFiles, approvedFiles, percentFiles };
     })
     .catch((error) => {
@@ -323,16 +324,13 @@ export const onProgressSharepointList = (
       console.log(
         `The Progress column was updated successfully in ${nameSharepointList}`
       );
-      alert(
-        `The Progress column was updated successfully in ${nameSharepointList}`
-      );
     })
     .catch((error) => {
       console.error("Error:", error);
     });
 };
 
-//Update phase progress Promotion, Design và Build
+//Update phase progress Promotion, Design và Build-------------------------------------------
 //Hàm đếm file
 // const progressFilesPhase = (
 //   spHttpClient: SPHttpClient,
@@ -519,12 +517,12 @@ const getUrlProgressPhaseFiles = (
       progressMap[folderKey].percentFiles =
         total > 0 ? parseFloat((approved / total).toFixed(4)) : 0;
     });
-
+    console.log(`${subFolderName}:${JSON.stringify(progressMap, null, 2)}`);
     return progressMap;
   });
 };
 
-//Hàm update Progress Promotion, Design và Build lên sharepoint list Phase01Progress, Phase02Progress, Phase03Progress
+//Hàm update Progress Promotion, Design và Build lên sharepoint list Phase01, Phase02, Phase03
 const updateProgressPhaseSharepointList = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -627,7 +625,126 @@ export const onProgressPhaseSharepointList = (
     });
 };
 
-//Project Folder----------------------------------------------------------------------------------------------------------------------------------------------------------
+//Update Phase Sharepoint list-------------------------------------------
+const updateSubPhaseProgressSharepointList = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  nameSharepointList: string,
+  subFolderNames: string,
+  documentId: string,
+  percentFiles: number
+): Promise<void> => {
+  return spHttpClient
+    .get(
+      `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=ProjectName eq '${subFolderNames}'&$select=ID,ProjectName`,
+      SPHttpClient.configurations.v1
+    )
+    .then((response: SPHttpClientResponse) => {
+      if (!response.ok) {
+        return Promise.reject("Failed to retrieve item for ProjectName");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      if (data.value && data.value.length > 0) {
+        const item = data.value[0];
+        if (!item.ID) {
+          return Promise.reject("Item does not have a valid ID");
+        }
+        const itemId = item.ID;
+
+        const body = JSON.stringify({
+          __metadata: {
+            type: `SP.Data.${nameSharepointList}ListItem`,
+          },
+          [`Phase${documentId}`]: percentFiles,
+        });
+
+        const optionsHTTP: ISPHttpClientOptions = {
+          headers: {
+            Accept: "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose",
+            "odata-version": "",
+            "If-Match": "*",
+            "X-HTTP-Method": "MERGE",
+          },
+          body: body,
+        };
+
+        return spHttpClient
+          .post(
+            `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})`,
+            SPHttpClient.configurations.v1,
+            optionsHTTP
+          )
+          .then((response) => {
+            if (!response.ok) {
+              return Promise.reject("Error");
+            }
+            console.log(
+              "The item was updated for the Phase column successfully"
+            );
+          });
+      } else {
+        return Promise.reject("No item found for ProjectName");
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      return Promise.reject(error);
+    });
+};
+
+//Event đếm, update file
+export const onSubProgressPhaseSharepointList = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  nameSharepointList: string
+): Promise<void> => {
+  return getDataFromSharepointList(
+    spHttpClient,
+    sharepointUrl,
+    nameSharepointList
+  )
+    .then((folderPairs) => {
+      const updatePromises: Promise<void>[] = [];
+
+      folderPairs.forEach(({ subFolderName }) => {
+        updatePromises.push(
+          getUrlProgressFoldersOption2(
+            spHttpClient,
+            sharepointUrl,
+            subFolderName
+          ).then((results) => {
+            results.forEach(
+              ({ subFolderNames, childFolderDocumentId, percentFiles }) => {
+                const subFolderNameString = Array.isArray(subFolderNames)
+                  ? subFolderNames[0]
+                  : subFolderNames;
+                return updateSubPhaseProgressSharepointList(
+                  spHttpClient,
+                  sharepointUrl,
+                  nameSharepointList,
+                  subFolderNameString,
+                  childFolderDocumentId,
+                  percentFiles
+                );
+              }
+            );
+          })
+        );
+      });
+
+      return Promise.all(updatePromises);
+    })
+    .then(() => {})
+    .catch((error) => {
+      console.error("Error:", error);
+      return Promise.reject(error);
+    });
+};
+
+//Project Folder-Update progress, documentID lên Project folder-------------------------------------------------------------------------------------------------------------
 //Hàm đếm files
 //Option1
 // const progressFileFolders = (
@@ -1182,9 +1299,6 @@ export const onProgressFolders = (
         console.log(
           `The Progress column was updated successfully in ProjectFolder Option1`
         );
-        alert(
-          `The Progress column was updated successfully in ProjectFolder Option1`
-        );
       });
     })
     .catch((error) => {
@@ -1218,9 +1332,6 @@ export const onProgressFolders = (
 //       });
 //       return Promise.all(updatePromises).then(() => {
 //         console.log(
-//           `The Progress column was updated successfully in ProjectFolder Option2`
-//         );
-//         alert(
 //           `The Progress column was updated successfully in ProjectFolder Option2`
 //         );
 //       });
@@ -1276,9 +1387,6 @@ export const onProgressFoldersOption2 = (
           console.log(
             `The Progress column was updated successfully in ProjectFolder Option2`
           );
-          alert(
-            `The Progress column was updated successfully in ProjectFolder Option2`
-          );
         })
         .catch((error) => {
           console.error("Error:", error);
@@ -1286,123 +1394,5 @@ export const onProgressFoldersOption2 = (
     })
     .catch((error) => {
       console.error("Error:", error);
-    });
-};
-
-//Update Phase Sharepoint list-----------------------------------------------------------------------------------------------------------------------------------------------
-const updateSubPhaseProgressSharepointList = (
-  spHttpClient: SPHttpClient,
-  sharepointUrl: string,
-  nameSharepointList: string,
-  subFolderNames: string,
-  documentId: string,
-  percentFiles: number
-): Promise<void> => {
-  return spHttpClient
-    .get(
-      `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items?$filter=ProjectName eq '${subFolderNames}'&$select=ID,ProjectName`,
-      SPHttpClient.configurations.v1
-    )
-    .then((response: SPHttpClientResponse) => {
-      if (!response.ok) {
-        return Promise.reject("Failed to retrieve item for ProjectName");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      if (data.value && data.value.length > 0) {
-        const item = data.value[0];
-        if (!item.ID) {
-          return Promise.reject("Item does not have a valid ID");
-        }
-        const itemId = item.ID;
-
-        const body = JSON.stringify({
-          __metadata: {
-            type: `SP.Data.${nameSharepointList}ListItem`,
-          },
-          [`Phase${documentId}`]: percentFiles,
-        });
-
-        const optionsHTTP: ISPHttpClientOptions = {
-          headers: {
-            Accept: "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose",
-            "odata-version": "",
-            "If-Match": "*",
-            "X-HTTP-Method": "MERGE",
-          },
-          body: body,
-        };
-
-        return spHttpClient
-          .post(
-            `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items(${itemId})`,
-            SPHttpClient.configurations.v1,
-            optionsHTTP
-          )
-          .then((response) => {
-            if (!response.ok) {
-              return Promise.reject("Error");
-            }
-            console.log(
-              "The item was updated for the Phase column successfully"
-            );
-          });
-      } else {
-        return Promise.reject("No item found for ProjectName");
-      }
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      return Promise.reject(error);
-    });
-};
-
-export const onSubProgressPhaseSharepointList = (
-  spHttpClient: SPHttpClient,
-  sharepointUrl: string,
-  nameSharepointList: string
-): Promise<void> => {
-  return getDataFromSharepointList(
-    spHttpClient,
-    sharepointUrl,
-    nameSharepointList
-  )
-    .then((folderPairs) => {
-      const updatePromises: Promise<void>[] = [];
-
-      folderPairs.forEach(({ subFolderName }) => {
-        updatePromises.push(
-          getUrlProgressFoldersOption2(
-            spHttpClient,
-            sharepointUrl,
-            subFolderName
-          ).then((results) => {
-            results.forEach(
-              ({ subFolderNames, childFolderDocumentId, percentFiles }) => {
-                const subFolderNameString = Array.isArray(subFolderNames)
-                  ? subFolderNames[0]
-                  : subFolderNames;
-                return updateSubPhaseProgressSharepointList(
-                  spHttpClient,
-                  sharepointUrl,
-                  nameSharepointList,
-                  subFolderNameString,
-                  childFolderDocumentId,
-                  percentFiles
-                );
-              }
-            );
-          })
-        );
-      });
-
-      return Promise.all(updatePromises);
-    })
-    .then(() => {})
-    .catch((error) => {
-      console.error("Error:", error);
-      return Promise.reject(error);
     });
 };

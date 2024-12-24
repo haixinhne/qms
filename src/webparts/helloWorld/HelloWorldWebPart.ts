@@ -15,7 +15,7 @@ import {
   childSubFolders,
   onProgressSharepointList,
   onProgressPhaseSharepointList,
-  //onProgressFolders,
+  onProgressFolders,
   onProgressFoldersOption2,
   onSubProgressPhaseSharepointList,
 } from "./CountFiles";
@@ -277,43 +277,47 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     //Event count files
     if (clickCountFilesOp1) {
       clickCountFilesOp1.addEventListener("click", () => {
-        // onProgressSharepointList(
-        //   this.context.spHttpClient,
-        //   sharepointUrl,
-        //   nameSharepointList
-        // );
-        // onProgressPhaseSharepointList(
-        //   this.context.spHttpClient,
-        //   sharepointUrl,
-        //   nameSharepointList
-        // );
-        // onProgressFolders(
-        //   this.context.spHttpClient,
-        //   sharepointUrl,
-        //   nameSharepointList
-        // );
+        alert(`Progress updated for the ${nameSharepointList} successfully`);
+
+        onProgressSharepointList(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
+        onProgressPhaseSharepointList(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
+        onProgressFolders(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
         onSubProgressPhaseSharepointList(
           this.context.spHttpClient,
           sharepointUrl,
           nameSharepointList
         );
-        // activityLog(
-        //   this.context.spHttpClient,
-        //   sharepointUrl,
-        //   nameSharepointSite,
-        //   "Update Progress Project Op1"
-        // );
-        // historyLog(
-        //   this.context.spHttpClient,
-        //   sharepointUrl,
-        //   nameSharepointSite,
-        //   `The Progress column was updated successfully in ${nameSharepointList} and ProjectFolder`
-        // );
+        activityLog(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointSite,
+          "Update Progress Project Op1"
+        );
+        historyLog(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointSite,
+          `The Progress column was updated successfully in ${nameSharepointList} and ProjectFolder`
+        );
       });
     }
 
     if (clickCountFilesOp2) {
       clickCountFilesOp2.addEventListener("click", () => {
+        alert(`Progress updated for the ${nameSharepointList} successfully`);
+
         onProgressSharepointList(
           this.context.spHttpClient,
           sharepointUrl,
@@ -329,11 +333,11 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           sharepointUrl,
           nameSharepointList
         );
-        // onSubProgressPhaseSharepointList(
-        //   this.context.spHttpClient,
-        //   sharepointUrl,
-        //   nameSharepointList
-        // );
+        onSubProgressPhaseSharepointList(
+          this.context.spHttpClient,
+          sharepointUrl,
+          nameSharepointList
+        );
         activityLog(
           this.context.spHttpClient,
           sharepointUrl,
