@@ -803,7 +803,7 @@ export const onSubPhaseProgressSharepointList = (
 
 //Project Folder-Update progress, documentID lên Project folder-------------------------------------------------------------------------------------------------------------
 //Hàm đếm files
-//Option1
+//Option1-style string, rename file
 // const progressFileFolders = (
 //   spHttpClient: SPHttpClient,
 //   sharepointUrl: string,
@@ -867,7 +867,7 @@ export const onSubPhaseProgressSharepointList = (
 //     });
 // };
 
-//op1
+//Option1-style string, click Approved file
 const progressFileFolders = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -932,7 +932,7 @@ const progressFileFolders = (
     });
 };
 
-//Option2
+//Option2-style number, rename file
 // const progressFileFoldersOption2 = (
 //   spHttpClient: SPHttpClient,
 //   sharepointUrl: string,
@@ -999,7 +999,7 @@ const progressFileFolders = (
 //     });
 // };
 
-//op2
+//Option2-style number, click Approved file
 const progressFileFoldersOption2 = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -1067,8 +1067,8 @@ const progressFileFoldersOption2 = (
     });
 };
 
-//Hàm update Progress và DocumentID cho thư mục
-//Option1
+//Hàm update
+//Option1-style string
 const updateProgressFileFolders = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -1121,7 +1121,7 @@ const updateProgressFileFolders = (
     .catch((error) => console.error("Error:", error));
 };
 
-//Option2
+//Option2-style number
 const updateProgressFileFoldersOption2 = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -1173,7 +1173,7 @@ const updateProgressFileFoldersOption2 = (
 };
 
 //Hàm lấy url các thư mục
-//Option1
+//Option1-style string
 const getUrlProgressFolders = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -1197,7 +1197,6 @@ const getUrlProgressFolders = (
         childFolderUrl,
       ])
         .then(({ percentFiles }) => {
-          //console.log(childFolderUrl, percentFiles);
           return updateProgressFileFolders(
             spHttpClient,
             sharepointUrl,
@@ -1216,7 +1215,7 @@ const getUrlProgressFolders = (
   return Promise.all(updatePromises).then(() => {});
 };
 
-//Option2
+//Option2-style number
 // const getUrlProgressFoldersOption2 = (
 //   spHttpClient: SPHttpClient,
 //   sharepointUrl: string,
@@ -1263,7 +1262,7 @@ const getUrlProgressFolders = (
 //   return Promise.all(updatePromises).then(() => {});
 // };
 
-//thay đổi
+//Option2-style number-edit
 const getUrlProgressFoldersOption2 = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -1330,8 +1329,8 @@ const getUrlProgressFoldersOption2 = (
   return Promise.all(updatePromises);
 };
 
-//Event đếm file và update giá trị cột Progress và DocumentID lên ProjectFolder
-//Option1
+//Event update
+//Option1- style string
 export const onProgressFolders = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -1359,7 +1358,7 @@ export const onProgressFolders = (
     });
 };
 
-//Option2
+//Option2-style number
 // export const onProgressFoldersOption2 = (
 //   spHttpClient: SPHttpClient,
 //   sharepointUrl: string,
@@ -1394,7 +1393,7 @@ export const onProgressFolders = (
 //     });
 // };
 
-//thay đổi
+//Option2-style number-edit
 export const onProgressFoldersOption2 = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
