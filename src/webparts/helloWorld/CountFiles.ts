@@ -73,6 +73,7 @@ const getDataFromSharepointList = (
 };
 
 //Hàm đếm file
+//Option-rename file
 // const progressFiles = (
 //   spHttpClient: SPHttpClient,
 //   sharepointUrl: string,
@@ -130,7 +131,7 @@ const getDataFromSharepointList = (
 //   });
 // };
 
-//op2
+//Option-click Approved
 const progressFiles = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -327,6 +328,7 @@ export const onProgressSharepointList = (
 
 //Update phase progress Promotion, Design và Build-------------------------------------------
 //Hàm đếm file
+//Option-rename file
 // const progressFilesPhase = (
 //   spHttpClient: SPHttpClient,
 //   sharepointUrl: string,
@@ -381,7 +383,7 @@ export const onProgressSharepointList = (
 //   });
 // };
 
-//op2
+//Option-click Approved
 const progressFilesPhase = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -776,7 +778,7 @@ export const onSubPhaseProgressSharepointList = (
           ).then((results) => {
             results.forEach(({ childFolderDocumentId, percentFiles }) => {
               console.log(
-                `CustomID:${customId}, SubFolderName:${subFolderName}, DocumentId:${childFolderDocumentId}, percentFiles:${percentFiles}`
+                `CustomID:${customId}, SubFolderName:${subFolderName}, DocumentId:${childFolderDocumentId}, PercentFiles:${percentFiles}`
               );
 
               return updateSubPhaseProgressSharepointList(
@@ -1215,53 +1217,6 @@ const getUrlProgressFolders = (
   return Promise.all(updatePromises).then(() => {});
 };
 
-//Option2-style number
-// const getUrlProgressFoldersOption2 = (
-//   spHttpClient: SPHttpClient,
-//   sharepointUrl: string,
-//   subFolderName: string | string[]
-// ): Promise<void> => {
-//   const subFolderNames = Array.isArray(subFolderName)
-//     ? subFolderName
-//     : [subFolderName];
-//   const subFolders = Object.keys(childSubFolders);
-//   const updatePromises: Promise<void>[] = [];
-
-//   subFolders.forEach((folder) => {
-//     const baseFolderUrl = `ProjectFolder/PROJECT/${subFolderNames}/${folder}`;
-//     const childFolders = childSubFolders[folder];
-
-//     childFolders.forEach((childFolder) => {
-//       const childFolderName = childFolder.name;
-//       const childFolderDocumentId = childFolder.DocumentId;
-//       const childFolderUrl = `${baseFolderUrl}/${childFolderName}`;
-//       const documentId = childFolder.DocumentId;
-//       const countAndUpdate = progressFileFoldersOption2(
-//         spHttpClient,
-//         sharepointUrl,
-//         [childFolderUrl]
-//       )
-//         .then(({ percentFiles }) => {
-//           //console.log(childFolderUrl, percentFiles);
-//           console.log(subFolderNames, childFolderDocumentId, percentFiles);
-//           return updateProgressFileFoldersOption2(
-//             spHttpClient,
-//             sharepointUrl,
-//             percentFiles,
-//             childFolderUrl,
-//             documentId
-//           );
-//         })
-//         .catch((error) => {
-//           console.error(`Error ${childFolderUrl}:`, error);
-//         });
-
-//       updatePromises.push(countAndUpdate);
-//     });
-//   });
-//   return Promise.all(updatePromises).then(() => {});
-// };
-
 //Option2-style number-edit
 const getUrlProgressFoldersOption2 = (
   spHttpClient: SPHttpClient,
@@ -1357,41 +1312,6 @@ export const onProgressFolders = (
       console.error("Error:", error);
     });
 };
-
-//Option2-style number
-// export const onProgressFoldersOption2 = (
-//   spHttpClient: SPHttpClient,
-//   sharepointUrl: string,
-//   nameSharepointList: string
-// ): Promise<void> => {
-//   return getDataFromSharepointList(
-//     spHttpClient,
-//     sharepointUrl,
-//     nameSharepointList
-//   )
-//     .then((folderPairs) => {
-//       const subFolder = folderPairs.map(({ subFolderName }) => subFolderName);
-//       const updatePromises: Promise<void>[] = [];
-
-//       subFolder.forEach((subFolderName) => {
-//         updatePromises.push(
-//           getUrlProgressFoldersOption2(
-//             spHttpClient,
-//             sharepointUrl,
-//             subFolderName
-//           )
-//         );
-//       });
-//       return Promise.all(updatePromises).then(() => {
-//         console.log(
-//           `The Progress column was updated successfully in ProjectFolder Option2`
-//         );
-//       });
-//     })
-//     .catch((error) => {
-//       console.error("Error:", error);
-//     });
-// };
 
 //Option2-style number-edit
 export const onProgressFoldersOption2 = (
