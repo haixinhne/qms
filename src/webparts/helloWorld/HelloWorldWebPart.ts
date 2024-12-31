@@ -868,63 +868,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  // //Hàm tạo subfolder
-  // private createSubfolder(subFolderName: string): Promise<any> {
-  //   const optionsHTTP: ISPHttpClientOptions = {
-  //     headers: {
-  //       accept: "application/json; odata=verbose",
-  //       "content-type": "application/json; odata=verbose",
-  //       "odata-version": "",
-  //     },
-  //   };
-  //   const subFolderUrl = `ProjectFolder/PROJECT/${subFolderName}`;
-  //   const subFolders = ["Promotion", "Design", "Build"];
-  //   const arrayFolderUrl: string[] = [];
-  //   return this.context.spHttpClient
-  //     .post(
-  //       `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('ProjectFolder/PROJECT/${subFolderName}')`,
-  //       SPHttpClient.configurations.v1,
-  //       optionsHTTP
-  //     )
-  //     .then((response: SPHttpClientResponse) => {
-  //       return response.json();
-  //     })
-  //     .then(() => {
-  //       // Tạo các thư mục con
-  //       return subFolders.reduce((prevPromise, folder) => {
-  //         return prevPromise.then(() => {
-  //           const folderUrl = `${subFolderUrl}/${folder}`;
-  //           return this.context.spHttpClient
-  //             .post(
-  //               `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${folderUrl}')`,
-  //               SPHttpClient.configurations.v1,
-  //               optionsHTTP
-  //             )
-  //             .then(() => {
-  //               // Tạo các thư mục con nhỏ hơn
-  //               const childFolders = childSubFolders[folder];
-  //               return childFolders.reduce((childPrevPromise, childFolder) => {
-  //                 const childFolderName = childFolder.name;
-  //                 const childFolderUrl = `${folderUrl}/${childFolderName}`;
-  //                 arrayFolderUrl.push(childFolderUrl);
-  //                 return childPrevPromise.then(() => {
-  //                   return this.context.spHttpClient.post(
-  //                     `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${childFolderUrl}')`,
-  //                     SPHttpClient.configurations.v1,
-  //                     optionsHTTP
-  //                   );
-  //                 });
-  //               }, Promise.resolve());
-  //             });
-  //         });
-  //       }, Promise.resolve());
-  //     })
-
-  //     .catch((error) => {
-  //       console.error("Error", error);
-  //     });
-  // }
-
+  //Hàm tạo subfolder
   private createSubfolder(subFolderName: string): Promise<any> {
     const optionsHTTP: ISPHttpClientOptions = {
       headers: {
@@ -947,7 +891,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return response.json();
       })
       .then(() => {
-        // Tạo các thư mục con
+        //Tạo các thư mục con
         return subFolders.reduce((prevPromise, folder) => {
           return prevPromise.then(() => {
             const folderUrl = `${subFolderUrl}/${folder}`;
@@ -958,7 +902,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                 optionsHTTP
               )
               .then(() => {
-                // Tạo các thư mục con nhỏ hơn
+                //Tạo các thư mục con nhỏ hơn
                 const childFolders = childSubFolders[folder];
                 return childFolders.reduce((childPrevPromise, childFolder) => {
                   const childFolderName = childFolder.name;
@@ -977,12 +921,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         }, Promise.resolve());
       })
       .then(() => {
-        // Cập nhật ContentTypeId cho các thư mục con nhỏ nhất
+        //Update ContentTypeId cho các thư mục con nhỏ hơn
         return arrayFolderUrl.reduce((updatePromise, childFolderUrl) => {
           return updatePromise.then(() => {
             const body = JSON.stringify({
               __metadata: { type: "SP.Data.ProjectFolderItem" },
-              ContentTypeId: "0x0120D5200058E37C62F9883A4EB5FC73B658C4A027", // ContentTypeId bạn cần cập nhật
+              ContentTypeId: "0x0120D5200058E37C62F9883A4EB5FC73B658C4A027",
             });
             const updateOptions: ISPHttpClientOptions = {
               headers: {
@@ -1032,138 +976,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         console.error("Error", error);
       });
   }
-
-  // //Document Set
-
-  // private createSubfolder(): Promise<any> {
-  //   const documentSetName = "hai16"; // Tên Document Set
-  //   const documentLibrary = "ProjectFolder"; // Tên Document Library
-  //   const contentTypeId = "0x0120D5200058E37C62F9883A4EB5FC73B658C4A027"; // Content Type ID của Document Set
-
-  //   const folderRelativeUrl = `${documentLibrary}/${documentSetName}`;
-
-  //   const optionsHTTP: ISPHttpClientOptions = {
-  //     headers: {
-  //       Accept: "application/json; odata=verbose",
-  //       "Content-Type": "application/json;odata=verbose",
-  //       "odata-version": "",
-  //     },
-  //   };
-
-  //   // Bước 1: Tạo thư mục
-  //   return this.context.spHttpClient
-  //     .post(
-  //       `${this.context.pageContext.web.absoluteUrl}/_api/web/folders/add('${folderRelativeUrl}')`,
-  //       SPHttpClient.configurations.v1,
-  //       optionsHTTP
-  //     )
-  //     .then((response) => {
-  //       if (!response.ok) {
-  //         return response.text().then((error) => {
-  //           throw new Error(`Error creating folder: ${error}`);
-  //         });
-  //       }
-  //       console.log("Folder created successfully!");
-
-  //       // Bước 2: Lấy thông tin ListItemAllFields
-  //       return this.context.spHttpClient
-  //         .get(
-  //           `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${folderRelativeUrl}')/ListItemAllFields`,
-  //           SPHttpClient.configurations.v1
-  //         )
-  //         .then((response) => {
-  //           if (!response.ok) {
-  //             return response.text().then((error) => {
-  //               throw new Error(`Error fetching folder item: ${error}`);
-  //             });
-  //           }
-  //           return response.json();
-  //         });
-  //     })
-  //     .then((data) => {
-  //       // Bước 3: Cập nhật ContentTypeId để biến thư mục thành Document Set
-
-  //       const body = JSON.stringify({
-  //         __metadata: { type: "SP.Data.ProjectFolderItem" },
-  //         ContentTypeId: contentTypeId,
-  //         Title: "hai1",
-  //         FileLeafRef: "hai1",
-  //       });
-
-  //       const optionsHTTP: ISPHttpClientOptions = {
-  //         headers: {
-  //           Accept: "application/json; odata=verbose",
-  //           "Content-Type": "application/json;odata=verbose",
-  //           "odata-version": "",
-  //           "X-HTTP-Method": "MERGE",
-  //           "If-Match": "*",
-  //         },
-  //         body: body,
-  //       };
-
-  //       return this.context.spHttpClient.post(
-  //         `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${folderRelativeUrl}')/ListItemAllFields`,
-  //         SPHttpClient.configurations.v1,
-  //         optionsHTTP
-  //       );
-  //     })
-  //     .then((response) => {
-  //       if (response.ok) {
-  //         console.log("Document Set created successfully!");
-  //       } else {
-  //         return response.text().then((error) => {
-  //           throw new Error(`Error updating folder to Document Set: ${error}`);
-  //         });
-  //       }
-  //     })
-  //     .catch((error) => {
-  //       console.error("Error creating Document Set:", error);
-  //     });
-  // }
-
-  // // Event tạo folder
-  // private onCreateFolder(): Promise<any> {
-  //   return this.getDataFromSharePointList()
-  //     .then((folderPairs) => {
-  //       // Lấy danh sách các tên thư mục con
-  //       const subFolder = folderPairs.map(({ subFolderName }) => subFolderName);
-
-  //       // Tạo Promise cho mỗi thư mục con
-  //       const createSubFolder = subFolder.map((subFolderName) =>
-  //         this.createSubfolder()
-  //       );
-
-  //       // Chờ tất cả các Promise hoàn thành
-  //       return Promise.all(createSubFolder);
-  //     })
-  //     .then(() => {
-  //       console.log("The folders were created successfully");
-  //       alert("The folders were created successfully");
-  //     })
-  //     .catch((error) => {
-  //       console.error("Error", error);
-  //     });
-  // }
-
-  // // //Event tạo folder
-  // private onCreateFolder(): Promise<any> {
-  //   return this.getDataFromSharePointList()
-  //     .then((folderPairs) => {
-  //       const subFolder = folderPairs.map(({ subFolderName }) => subFolderName);
-  //       const createSubFolder = subFolder.map((subFolderName) =>
-  //         this.createSubfolder(subFolderName)
-  //       );
-
-  //       return Promise.all(createSubFolder);
-  //     })
-  //     .then(() => {
-  //       console.log("The folders were created successfully");
-  //       alert("The folders were created successfully");
-  //     })
-  //     .catch((error) => {
-  //       console.error("Error", error);
-  //     });
-  // }
 
   //Event update cột Nation ---------------------------------------------------------------------------------------------------------------------------
   private onUpdateNationColumn(): Promise<any> {
