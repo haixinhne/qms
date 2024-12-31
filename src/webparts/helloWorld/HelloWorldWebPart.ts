@@ -13,7 +13,6 @@ import {
 } from "./ActivityLog";
 import {
   childSubFolders,
-  onProgressSharepointList,
   onProgressPhaseSharepointList,
   onProgressFolders,
   onProgressFoldersOption2,
@@ -279,11 +278,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       clickCountFilesOp1.addEventListener("click", () => {
         alert(`Progress updated for the ${nameSharepointList} successfully`);
 
-        onProgressSharepointList(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointList
-        );
         onProgressPhaseSharepointList(
           this.context.spHttpClient,
           sharepointUrl,
@@ -318,11 +312,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       clickCountFilesOp2.addEventListener("click", () => {
         alert(`Progress updated for the ${nameSharepointList} successfully`);
 
-        onProgressSharepointList(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointList
-        );
         onProgressPhaseSharepointList(
           this.context.spHttpClient,
           sharepointUrl,
