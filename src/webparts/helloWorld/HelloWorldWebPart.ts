@@ -175,7 +175,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             }
 
             if (roleInfo.length === 0) {
-              console.warn(`Error: ${folderName}`);
+              console.warn(`Error ${folderName}`);
             }
 
             roleInfo.push({ groupId: 36, newRoleId: 1073741829 });
@@ -205,7 +205,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               );
             })
             .catch((error) => {
-              console.error("Error:", error);
+              console.error("Error", error);
             });
 
           activityLog(
@@ -406,12 +406,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return response.arrayBuffer();
       })
       .catch((error) => {
-        console.error("Error:", error);
+        console.error("Error", error);
         return Promise.reject(error);
       });
   }
 
-  //Hàm đọc nội dung file excel để lấy tên các cột và items
+  //Hàm lấy tên các cột và tên item từ Excel
   private readFileExcelFromSharePoint(fileContent: ArrayBuffer): {
     nameColumnSharepoint: string[];
     nameItems: Record<string, any>[];
@@ -434,7 +434,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   }
 
   //Hàm tạo sharepoint list
-  private async createSharePointList(listName: string): Promise<any> {
+  private createSharePointList(listName: string): Promise<any> {
     return this.context.spHttpClient
       .get(
         `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')`,
@@ -472,6 +472,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             if (createResponse.ok) {
               console.log(`The list was created successfully: ${listName}`);
               alert(`The list was created successfully: ${listName}`);
+              //Save history
               historyLog(
                 this.context.spHttpClient,
                 sharepointUrl,
@@ -486,12 +487,12 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           });
       })
       .catch((error) => {
-        console.error("Error:", error);
+        console.error("Error", error);
       });
   }
 
   //Hàm tạo cột sharepoint list
-  private async createColumnInSharepointList(
+  private createColumnInSharepointList(
     listName: string,
     columnName: string
   ): Promise<any> {
@@ -502,7 +503,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       )
       .then((response) => {
         if (!response.ok) {
-          console.error("Error fetching existing columns.");
+          console.error("Error fetching existing columns");
           return [];
         }
         return response
@@ -543,13 +544,13 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               console.log(`The column was created successfully: ${columnName}`);
             } else {
               return createResponse.json().then((errorResponse) => {
-                console.error("Error:", errorResponse);
+                console.error("Error", errorResponse);
               });
             }
           });
       })
       .catch((error) => {
-        console.error("Error:", error);
+        console.error("Error", error);
       });
   }
 
@@ -591,7 +592,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     let createdFields: string[] = [];
     let updatedFields: string[] = [];
 
-    //Kiểm tra các thay đổi (true-false)
+    //Check sự thay đổi của các item (true-false)
     for (const key in itemData) {
       if (itemData.hasOwnProperty(key)) {
         const newValue = String(itemData[key] || "");
@@ -638,6 +639,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               `The item was created successfully: ${itemData.CustomID}`
             );
             alert(`The item was created successfully: ${itemData.CustomID}`);
+            //Save history
             historyLog(
               this.context.spHttpClient,
               sharepointUrl,
@@ -654,6 +656,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               `The item was updated successfully: ${itemData.CustomID}`
             );
             alert(`The item was updated successfully: ${itemData.CustomID}`);
+            //Save history
             historyLog(
               this.context.spHttpClient,
               sharepointUrl,
@@ -677,21 +680,20 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           response
             .json()
             .then((errorResponse) => {
-              console.error("Error:", errorResponse);
+              console.error("Error", errorResponse);
             })
             .catch((jsonError) => {
-              console.error("Error:", jsonError);
+              console.error("Error", jsonError);
             });
         }
       })
       .catch((error) => {
-        console.error("Error:", error);
+        console.error("Error", error);
       });
   }
 
   //Hàm xóa items ở sharepoint list
   private deleteItemFromSharePoint(listName: string, item: any): void {
-    const deleteEndpoint = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items(${item.Id})`;
     const optionsHTTP: ISPHttpClientOptions = {
       headers: {
         Accept: "application/json;odata=verbose",
@@ -703,25 +705,34 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     };
 
     this.context.spHttpClient
-      .post(deleteEndpoint, SPHttpClient.configurations.v1, optionsHTTP)
+      .post(
+        `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('${listName}')/items(${item.Id})`,
+        SPHttpClient.configurations.v1,
+        optionsHTTP
+      )
       .then((deleteResponse) => {
         if (deleteResponse.ok) {
-          console.log(`The item was deleted successfully: ${item.CustomID}`);
-          alert(`The item was deleted successfully: ${item.CustomID}`);
+          console.log(
+            `The item was deleted successfully, CustomID: ${item.CustomID}`
+          );
+          alert(
+            `The item was deleted successfully, CustomID: ${item.CustomID}`
+          );
+          //Save history
           historyLog(
             this.context.spHttpClient,
             sharepointUrl,
             nameSharepointSite,
-            `The item was deleted successfully: ${item.CustomID}`
+            `The item was deleted successfully, CustomID: ${item.CustomID}`
           );
         } else {
           deleteResponse
             .json()
             .then((errorResponse) => {
-              console.error("Error:", errorResponse);
+              console.error("Error", errorResponse);
             })
             .catch((jsonError) => {
-              console.error("Error:", jsonError);
+              console.error("Error", jsonError);
             });
         }
       })
@@ -732,10 +743,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Event tạo sharepoint list, tạo - update - xóa items
   private onClickButtonCreateSharepoint(): void {
-    if (!nameSharepointList) {
-      alert("Please enter a name for the SharePoint list!");
-      return;
-    }
     this.createSharePointList(nameSharepointList)
       .then(() => {
         nameSharepointList;
@@ -752,7 +759,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                 nameSharepointList,
                 createColumn
               ).catch((error) => {
-                console.error("Error:", error);
+                console.error("Error", error);
               });
             });
           }, Promise.resolve())
@@ -797,7 +804,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           )
           .then((response) => {
             if (!response.ok) {
-              console.log(`Error: ${response.statusText}`);
+              console.log(`Error ${response.statusText}`);
             }
             return response.json();
           })
@@ -814,7 +821,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       })
 
       .catch((error) => {
-        console.error("Error:", error);
+        console.error("Error", error);
       });
   }
 
@@ -853,7 +860,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         return folderValues;
       })
       .catch((error) => {
-        console.error("Error:", error);
+        console.error("Error", error);
       });
   }
 
@@ -867,7 +874,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       },
     };
     const subFolderUrl = `ProjectFolder/PROJECT/${subFolderName}`;
-    const subFolders = ["Promotion", "Design", "Build"];
+    const subFolders = Object.keys(childSubFolders);
     const arrayFolderUrl: string[] = [];
 
     return this.context.spHttpClient
@@ -910,37 +917,68 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         }, Promise.resolve());
       })
       .then(() => {
-        //Update ContentTypeId cho các thư mục con nhỏ hơn
+        // Update ContentTypeId cho các thư mục con nhỏ hơn
         return arrayFolderUrl.reduce((updatePromise, childFolderUrl) => {
           return updatePromise.then(() => {
-            const body = JSON.stringify({
-              __metadata: { type: "SP.Data.ProjectFolderItem" },
-              ContentTypeId: "0x0120D5200058E37C62F9883A4EB5FC73B658C4A027",
-            });
-            const updateOptions: ISPHttpClientOptions = {
+            const checkContentTypeId: ISPHttpClientOptions = {
               headers: {
                 Accept: "application/json; odata=verbose",
-                "Content-Type": "application/json;odata=verbose",
+                "content-type": "application/json;odata=verbose",
                 "odata-version": "",
-                "X-HTTP-Method": "MERGE",
-                "If-Match": "*",
               },
-              body: body,
             };
+
+            //Check ContentTypeId
             return this.context.spHttpClient
-              .post(
-                `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${childFolderUrl}')/ListItemAllFields`,
+              .get(
+                `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${childFolderUrl}')/ListItemAllFields?$select=ContentTypeId`,
                 SPHttpClient.configurations.v1,
-                updateOptions
+                checkContentTypeId
               )
-              .then(() => {
-                console.log(
-                  `Updated ContentTypeId for folder: ${childFolderUrl}`
-                );
+              .then((response: SPHttpClientResponse) => response.json())
+              .then((data) => {
+                if (
+                  data.d.ContentTypeId.startsWith(
+                    "0x0120D5200058E37C62F9883A4EB5FC73B658C4A027"
+                  )
+                ) {
+                  console.log(
+                    `The ContentTypeId already exists in the folder: ${childFolderUrl}`
+                  );
+                  return Promise.resolve();
+                }
+
+                //Update ContentTypeId
+                const body = JSON.stringify({
+                  __metadata: { type: "SP.Data.ProjectFolderItem" },
+                  ContentTypeId: "0x0120D5200058E37C62F9883A4EB5FC73B658C4A027",
+                });
+                const updateOptions: ISPHttpClientOptions = {
+                  headers: {
+                    Accept: "application/json; odata=verbose",
+                    "content-type": "application/json;odata=verbose",
+                    "odata-version": "",
+                    "X-HTTP-Method": "MERGE",
+                    "If-Match": "*",
+                  },
+                  body: body,
+                };
+                return this.context.spHttpClient
+                  .post(
+                    `${this.context.pageContext.web.absoluteUrl}/_api/web/GetFolderByServerRelativeUrl('${childFolderUrl}')/ListItemAllFields`,
+                    SPHttpClient.configurations.v1,
+                    updateOptions
+                  )
+                  .then(() => {
+                    console.log(
+                      `The ContentTypeId updated in the folder: ${childFolderUrl}`
+                    );
+                  });
               });
           });
         }, Promise.resolve());
       })
+
       .catch((error) => {
         console.error("Error", error);
       });
@@ -1026,7 +1064,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         );
       })
       .catch((error) => {
-        console.error("Error:", error);
+        console.error("Error", error);
       });
   }
 
