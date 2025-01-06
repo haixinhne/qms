@@ -19,7 +19,33 @@ export const getIdGroup = (
     .catch((error) => console.error("Error", error));
 };
 
-//Set permissions cho item-sharepoint list-------------------------------------------------------------------------------------------------------
+//Hàm gửi yêu cầu tới Sharepoint
+const executeRequest = (
+  spHttpClient: SPHttpClient,
+  url: string,
+  formDigestValue: string
+): Promise<void> => {
+  return spHttpClient
+    .post(url, SPHttpClient.configurations.v1, {
+      headers: {
+        Accept: "application/json;odata=verbose",
+        "X-RequestDigest": formDigestValue,
+      },
+    })
+    .then((response: SPHttpClientResponse) => {
+      if (!response.ok) {
+        return response.json().then((errorDetails) => {
+          console.error("Error", errorDetails);
+          return Promise.reject(
+            "Request failed: " + errorDetails.error.message.value
+          );
+        });
+      }
+      return Promise.resolve();
+    });
+};
+
+//Set permissions cho item-sharepoint list-------------------------------------------------------------------------------------------------------------------------
 //Lấy ID của item dựa vào giá trị ở cột Nation
 const getItemId = (
   spHttpClient: SPHttpClient,
@@ -45,7 +71,7 @@ const getItemId = (
     });
 };
 
-//Hàm quản lý quyền
+//Event
 export const manageRoles = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -67,7 +93,7 @@ export const manageRoles = (
             formDigestValue
           )
             .then(() =>
-              removeAllRolesFromItem(
+              removeAllRoleItem(
                 spHttpClient,
                 sharepointUrl,
                 nameSharepointList,
@@ -95,33 +121,7 @@ export const manageRoles = (
     .catch((error) => console.error(`Error ${nameItems}`, error));
 };
 
-//Hàm gửi yêu cầu tới SharePoint
-const executeRequest = (
-  spHttpClient: SPHttpClient,
-  url: string,
-  formDigestValue: string
-): Promise<void> => {
-  return spHttpClient
-    .post(url, SPHttpClient.configurations.v1, {
-      headers: {
-        Accept: "application/json;odata=verbose",
-        "X-RequestDigest": formDigestValue,
-      },
-    })
-    .then((response: SPHttpClientResponse) => {
-      if (!response.ok) {
-        return response.json().then((errorDetails) => {
-          console.error("Error", errorDetails);
-          return Promise.reject(
-            "Request failed: " + errorDetails.error.message.value
-          );
-        });
-      }
-      return Promise.resolve();
-    });
-};
-
-// Ngắt quyền kế thừa của mục
+//Ngắt quyền kế thừa của items
 const breakRoleInheritanceItem = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -135,8 +135,8 @@ const breakRoleInheritanceItem = (
   });
 };
 
-//Xóa quyền của nhóm hiện tại khỏi mục
-const removeCurrentRoleFromItem = (
+//Xóa quyền của 1 nhóm khỏi items
+const removeCurrentRoleItem = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string,
@@ -150,8 +150,8 @@ const removeCurrentRoleFromItem = (
   });
 };
 
-//Xóa tất cả các quyền hiện có của các nhóm khỏi mục
-const removeAllRolesFromItem = (
+//Xóa quyền của tất cả nhóm khỏi items
+const removeAllRoleItem = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   nameSharepointList: string,
@@ -170,7 +170,7 @@ const removeAllRolesFromItem = (
     .then((data) => {
       // Xóa tất cả các quyền (nếu có)
       const removePromises = data.value.map((roleAssignment: any) =>
-        removeCurrentRoleFromItem(
+        removeCurrentRoleItem(
           spHttpClient,
           sharepointUrl,
           nameSharepointList,
@@ -197,7 +197,8 @@ const addNewRoleItem = (
   return executeRequest(spHttpClient, requestUrl, formDigestValue);
 };
 
-//Set permissions cho Folders--------------------------------------------------------------------------------------------------------------------
+//Set permissions cho Folders-------------------------------------------------------------------------------------------------------------------------------------
+//Event
 export const manageRolesFolder = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -213,7 +214,7 @@ export const manageRolesFolder = (
     formDigestValue
   )
     .then(() =>
-      removeAllRolesFromFolder(
+      removeAllRoleFolder(
         spHttpClient,
         sharepointUrl,
         folderUrl,
@@ -221,7 +222,7 @@ export const manageRolesFolder = (
       )
     )
     .then(() =>
-      addNewRoleToFolder(
+      addNewRoleFolder(
         spHttpClient,
         sharepointUrl,
         folderUrl,
@@ -236,6 +237,7 @@ export const manageRolesFolder = (
     .catch((error) => console.error(`Error ${folderUrl}`, error));
 };
 
+//Ngắt quyền kế thừa của items
 const breakRoleInheritanceFolder = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
@@ -246,7 +248,21 @@ const breakRoleInheritanceFolder = (
   return executeRequest(spHttpClient, requestUrl, formDigestValue);
 };
 
-const removeAllRolesFromFolder = (
+//Xóa quyền của 1 nhóm khỏi items
+const removeCurrentRoleFolder = (
+  spHttpClient: SPHttpClient,
+  sharepointUrl: string,
+  folderUrl: string,
+  groupId: number,
+  formDigestValue: string
+): Promise<void> => {
+  const requestUrl = `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields/roleassignments/removeroleassignment(principalid=${groupId})`;
+
+  return executeRequest(spHttpClient, requestUrl, formDigestValue);
+};
+
+//Xóa quyền của tất cả nhóm khỏi items
+const removeAllRoleFolder = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   folderUrl: string,
@@ -264,7 +280,7 @@ const removeAllRolesFromFolder = (
     })
     .then((data) => {
       const removePromises = data.value.map((roleAssignment: any) =>
-        removeCurrentRoleFromFolder(
+        removeCurrentRoleFolder(
           spHttpClient,
           sharepointUrl,
           folderUrl,
@@ -277,19 +293,8 @@ const removeAllRolesFromFolder = (
     });
 };
 
-const removeCurrentRoleFromFolder = (
-  spHttpClient: SPHttpClient,
-  sharepointUrl: string,
-  folderUrl: string,
-  groupId: number,
-  formDigestValue: string
-): Promise<void> => {
-  const requestUrl = `${sharepointUrl}/_api/web/GetFolderByServerRelativeUrl('${folderUrl}')/ListItemAllFields/roleassignments/removeroleassignment(principalid=${groupId})`;
-
-  return executeRequest(spHttpClient, requestUrl, formDigestValue);
-};
-
-const addNewRoleToFolder = (
+//Thêm quyền mới cho nhóm
+const addNewRoleFolder = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,
   folderUrl: string,

@@ -1,4 +1,5 @@
 import { Version } from "@microsoft/sp-core-library";
+//import { DigestCache } from "@microsoft/sp-http";
 import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import type { IReadonlyTheme } from "@microsoft/sp-component-base";
 import styles from "./HelloWorldWebPart.module.scss";
