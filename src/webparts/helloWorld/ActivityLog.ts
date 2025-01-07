@@ -1,6 +1,6 @@
 import { SPHttpClient, SPHttpClientResponse } from "@microsoft/sp-http";
 
-//Hàm lấy tên user name
+//Hàm lấy tên username
 export const getUserName = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string
@@ -164,7 +164,7 @@ const saveJsonSharePoint = (
 };
 
 //History-----------------------------------------------------------------------------------------------------------------------------------------
-// Hàm tạo nội dung khi console.log
+//Hàm tạo nội dung khi console.log
 export const historyLog = (
   spHttpClient: SPHttpClient,
   sharepointUrl: string,

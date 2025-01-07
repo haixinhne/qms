@@ -11,28 +11,14 @@ export const childSubFolders: {
   Promotion: [
     { name: "Basic project data", DocumentId: "0100" },
     { name: "Promotion activities", DocumentId: "0101" },
-    // { name: "Project risk analysis", DocumentId: "0105" },
-    // { name: "Stakeholder Management", DocumentId: "0107" },
-    // { name: "Design Review 01 AS-ME", DocumentId: "0109" },
-    // { name: "Client Contract Review (CCR)", DocumentId: "0111" },
-    // { name: "Project Approval (EU-Kento)", DocumentId: "0113" },
-    // { name: "Estimate Approval (EU-Kessai)", DocumentId: "0113" },
   ],
   Design: [
     { name: "Drawings", DocumentId: "2300" },
     { name: "Funtion Checklist AS", DocumentId: "2301" },
-    // { name: "Funtion Checklist ME", DocumentId: "2303" },
-    // { name: "Designer Approval Request", DocumentId: "2305" },
-    // { name: "Design Review 23 AS-ME", DocumentId: "2307" },
   ],
   Build: [
     { name: "Project outline", DocumentId: "4500" },
     { name: "PM Policy", DocumentId: "4501" },
-    // { name: "HSE risks (Health, Safely & Env.ment)", DocumentId: "4503" },
-    // { name: "Funtion Checklist Update", DocumentId: "4504" },
-    // { name: "Quality Plan", DocumentId: "4505" },
-    // { name: "Schedule", DocumentId: "4506" },
-    // { name: "Construction Kickoff", DocumentId: "4507" },
   ],
 };
 
@@ -56,8 +42,8 @@ const getDataFromSharepointList = (
 
         .filter((item: any) => item.Nation && item.ProjectName)
         .map((item: any) => ({
-          subFolderName: item.ProjectName, //ProjectName
-          customId: item.CustomID, //CustomId
+          subFolderName: item.ProjectName,
+          customId: item.CustomID,
         }))
         .filter(
           (name: any, index: Number, self: any) =>

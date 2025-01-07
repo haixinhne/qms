@@ -1,5 +1,4 @@
 import { Version } from "@microsoft/sp-core-library";
-//import { DigestCache } from "@microsoft/sp-http";
 import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import type { IReadonlyTheme } from "@microsoft/sp-component-base";
 import styles from "./HelloWorldWebPart.module.scss";
@@ -30,7 +29,7 @@ import {
 
 import { __metadata } from "tslib";
 
-//Url file Excel
+//Global
 const excelUrl = "/sites/QMS/ProjectFolder/ADMIN/Book1.xlsx";
 const sharepointUrl = "https://iscapevn.sharepoint.com/sites/QMS";
 const nameSharepointSite = "QMS";
@@ -189,7 +188,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                   folderPath,
                   groupId,
                   newRoleId,
-                  this.context.pageContext.legacyPageContext.formDigestValue
+                  this.context
                 )
               );
             });
@@ -242,7 +241,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                 nameItems,
                 groupId,
                 newRoleId,
-                this.context.pageContext.legacyPageContext.formDigestValue
+                this.context
               )
             );
           });
@@ -555,7 +554,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Hàm tạo items, update items
+  //Hàm tạo item, update item
   private async createItemsInSharePointList(
     listName: string,
     itemData: any
@@ -742,7 +741,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Event tạo sharepoint list, tạo - update - xóa items
+  //Event tạo sharepoint list, tạo - update - xóa item
   private onClickButtonCreateSharepoint(): void {
     this.createSharePointList(nameSharepointList)
       .then(() => {
@@ -918,7 +917,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         }, Promise.resolve());
       })
       .then(() => {
-        // Update ContentTypeId cho các thư mục con nhỏ hơn
+        //Update ContentTypeId cho các thư mục con nhỏ hơn
         return arrayFolderUrl.reduce((updatePromise, childFolderUrl) => {
           return updatePromise.then(() => {
             const checkContentTypeId: ISPHttpClientOptions = {
