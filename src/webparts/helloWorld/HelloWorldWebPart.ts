@@ -124,37 +124,47 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     //Event click button-------------------------------------------------------------------------------------------------------------------------
     //Event tạo sharepoint
     if (clickCreateSharepoint) {
-      clickCreateSharepoint.addEventListener("click", () => {
-        this.onClickButtonCreateSharepoint();
-        activityLog(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointSite,
-          "Create/Update ProjectList"
-        );
+      clickCreateSharepoint.addEventListener("click", async () => {
+        try {
+          this.onClickButtonCreateSharepoint();
+          await activityLog(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointSite,
+            "Create/Update ProjectList"
+          );
+        } catch (error) {
+          console.error("Error", error);
+        }
       });
     }
 
     //Event tạo folder
     if (clickCreateFolder) {
-      clickCreateFolder.addEventListener("click", () => {
-        this.onCreateFolder();
-        activityLog(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointSite,
-          "Create ProjectFolder"
-        );
+      clickCreateFolder.addEventListener("click", async () => {
+        try {
+          await this.onCreateFolder();
+          await activityLog(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointSite,
+            "Create ProjectFolder"
+          );
+        } catch (error) {
+          console.error("Error", error);
+        }
       });
     }
 
     //Event set permissions
     //Set permissions folder
     if (setFolderPermissions) {
-      setFolderPermissions.addEventListener("click", () => {
-        this.getDataFromSharePointList().then((folderData) => {
+      setFolderPermissions.addEventListener("click", async () => {
+        try {
+          const folderData = await this.getDataFromSharePointList();
+
           if (!folderData || folderData.length === 0) {
-            console.warn("Error");
+            console.error("Error");
             return;
           }
 
@@ -194,151 +204,159 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             });
           });
 
+          await Promise.all(allPromises);
+
+          alert("The folder permissions were set successfully");
+
+          await historyLog(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointSite,
+            "The folder permissions were set successfully"
+          );
+
+          await activityLog(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointSite,
+            "Set Folder Permissions"
+          );
+          await this.onUpdateNationColumn();
+        } catch (error) {
+          console.error("Error", error);
+        }
+      });
+    }
+
+    //Set permissions sharepoint list
+    if (setListPermissions) {
+      setListPermissions.addEventListener("click", async () => {
+        try {
+          await getIdGroup(this.context.spHttpClient, sharepointUrl);
+
+          const allPromises: Promise<void>[] = [];
+
+          manageRolesValue.forEach(({ nameItems, groupId, newRoleId }) => {
+            const roleInfo = [
+              { groupId, newRoleId },
+              { groupId: 36, newRoleId: 1073741829 },
+            ];
+
+            roleInfo.forEach(({ groupId, newRoleId }) => {
+              allPromises.push(
+                manageRoles(
+                  this.context.spHttpClient,
+                  sharepointUrl,
+                  nameSharepointList,
+                  nameItems,
+                  groupId,
+                  newRoleId,
+                  this.context
+                )
+              );
+            });
+          });
+
           Promise.all(allPromises)
             .then(() => {
-              alert("The folder permissions were set successfully");
-              historyLog(
+              alert("The list permissions were set successfully");
+              return historyLog(
                 this.context.spHttpClient,
                 sharepointUrl,
                 nameSharepointSite,
-                "The folder permissions were set successfully"
+                "The list permissions were set successfully"
               );
             })
             .catch((error) => {
               console.error("Error", error);
             });
 
-          activityLog(
+          await activityLog(
             this.context.spHttpClient,
             sharepointUrl,
             nameSharepointSite,
-            "Set Folder Permissions"
+            "Set List Permissions"
           );
-          this.onUpdateNationColumn();
-        });
-      });
-    }
-
-    //Set permissions sharepoint list
-    if (setListPermissions) {
-      setListPermissions.addEventListener("click", () => {
-        getIdGroup(this.context.spHttpClient, sharepointUrl);
-
-        const allPromises: Promise<void>[] = [];
-
-        manageRolesValue.forEach(({ nameItems, groupId, newRoleId }) => {
-          const roleInfo = [
-            { groupId, newRoleId },
-            { groupId: 36, newRoleId: 1073741829 },
-          ];
-
-          roleInfo.forEach(({ groupId, newRoleId }) => {
-            allPromises.push(
-              manageRoles(
-                this.context.spHttpClient,
-                sharepointUrl,
-                nameSharepointList,
-                nameItems,
-                groupId,
-                newRoleId,
-                this.context
-              )
-            );
-          });
-        });
-
-        Promise.all(allPromises)
-          .then(() => {
-            alert("The list permissions were set successfully");
-            historyLog(
-              this.context.spHttpClient,
-              sharepointUrl,
-              nameSharepointSite,
-              "The list permissions were set successfully"
-            );
-          })
-          .catch((error) => {
-            console.error(
-              "An error occurred while setting permissions:",
-              error
-            );
-          });
-
-        activityLog(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointSite,
-          "Set List Permissions"
-        );
+        } catch (error) {
+          console.error("Error", error);
+        }
       });
     }
 
     //Event count files
     if (clickCountFilesOp1) {
-      clickCountFilesOp1.addEventListener("click", () => {
-        alert(`Progress updated for the ${nameSharepointList} successfully`);
+      clickCountFilesOp1.addEventListener("click", async () => {
+        try {
+          alert(`Progress updated for the ${nameSharepointList} successfully`);
 
-        onProgressPhaseSharepointList(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointList
-        );
-        onProgressFolders(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointList
-        );
-        onSubPhaseProgressSharepointList(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointList
-        );
-        activityLog(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointSite,
-          "Update Progress Project Op1"
-        );
-        historyLog(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointSite,
-          `The Progress column was updated successfully in ${nameSharepointList} and ProjectFolder`
-        );
+          await onProgressPhaseSharepointList(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointList
+          );
+          await onProgressFolders(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointList
+          );
+          await onSubPhaseProgressSharepointList(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointList
+          );
+          await activityLog(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointSite,
+            "Update Progress Project Op1"
+          );
+          await historyLog(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointSite,
+            `The Progress column was updated successfully in ${nameSharepointList} and ProjectFolder`
+          );
+        } catch (error) {
+          console.error("Error", error);
+        }
       });
     }
 
     if (clickCountFilesOp2) {
-      clickCountFilesOp2.addEventListener("click", () => {
-        alert(`Progress updated for the ${nameSharepointList} successfully`);
+      clickCountFilesOp2.addEventListener("click", async () => {
+        try {
+          alert(`Progress updated for the ${nameSharepointList} successfully`);
 
-        onProgressPhaseSharepointList(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointList
-        );
-        onProgressFoldersOption2(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointList
-        );
-        onSubPhaseProgressSharepointList(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointList
-        );
-        activityLog(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointSite,
-          "Update Progress Project Op2"
-        );
-        historyLog(
-          this.context.spHttpClient,
-          sharepointUrl,
-          nameSharepointSite,
-          `The Progress column was updated successfully in ${nameSharepointList}`
-        );
+          await onProgressPhaseSharepointList(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointList
+          );
+          await onProgressFoldersOption2(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointList
+          );
+          await onSubPhaseProgressSharepointList(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointList
+          );
+          await activityLog(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointSite,
+            "Update Progress Project Op2"
+          );
+          await historyLog(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointSite,
+            `The Progress column was updated successfully in ${nameSharepointList}`
+          );
+        } catch (error) {
+          console.error("Error", error);
+        }
       });
     }
 
@@ -369,7 +387,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   </ul>`;
     });
 
-    if (this.domElement.querySelector("#spListContainer") != null) {
+    if (this.domElement.querySelector("#spListContainer") !== null) {
       this.domElement.querySelector("#spListContainer")!.innerHTML = html;
     }
   }
@@ -478,7 +496,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
                 sharepointUrl,
                 nameSharepointSite,
                 `The list was created successfully: ${listName}`
-              );
+              ).catch((error) => {
+                console.error("Error", error);
+              });
             } else {
               return createResponse.json().then((errorResponse) => {
                 console.error("Error creating list:", errorResponse);
@@ -594,7 +614,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
     //Check sự thay đổi của các item (true-false)
     for (const key in itemData) {
-      if (itemData.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(itemData, key)) {
         const newValue = String(itemData[key] || "");
         const existingValue = saveExistingItem
           ? String(saveExistingItem[key] || "")
@@ -645,11 +665,16 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               sharepointUrl,
               nameSharepointSite,
               `The item was created successfully: ${itemData.CustomID}`
-            );
+            ).catch((error) => {
+              console.error("Error", error);
+            });
+
             if (createdFields.length > 0) {
-              `The column was created successfully: ${createdFields.join(
-                ", "
-              )}`;
+              console.log(
+                `The column was created successfully: ${createdFields.join(
+                  ", "
+                )}`
+              );
             }
           } else if (method === "MERGE") {
             console.log(
@@ -662,7 +687,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
               sharepointUrl,
               nameSharepointSite,
               `The item was updated successfully: ${itemData.CustomID}`
-            );
+            ).catch((error) => {
+              console.error("Error", error);
+            });
+
             if (updatedFields.length > 0) {
               console.log(
                 `The column was updated successfully: ${updatedFields.join(
@@ -719,7 +747,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             `The item was deleted successfully, CustomID: ${item.CustomID}`
           );
           //Save history
-          historyLog(
+          return historyLog(
             this.context.spHttpClient,
             sharepointUrl,
             nameSharepointSite,
@@ -744,9 +772,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
   //Event tạo sharepoint list, tạo - update - xóa item
   private onClickButtonCreateSharepoint(): void {
     this.createSharePointList(nameSharepointList)
-      .then(() => {
-        nameSharepointList;
-      })
+
       //Tạo cột từ file excel
       .then(() => this.getFileExcelFromSharePoint(excelUrl))
       .then((fileContent: ArrayBuffer) => {
@@ -850,7 +876,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             customId: item.CustomID,
           }))
           .filter(
-            (name: any, index: Number, self: any) =>
+            (name: any, index: number, self: any) =>
               self.findIndex(
                 (i: any) => i.subFolderName === name.subFolderName
               ) === index

@@ -46,7 +46,7 @@ const getDataFromSharepointList = (
           customId: item.CustomID,
         }))
         .filter(
-          (name: any, index: Number, self: any) =>
+          (name: any, index: number, self: any) =>
             self.findIndex(
               (i: any) => i.subFolderName === name.subFolderName
             ) === index
