@@ -18,15 +18,12 @@ import {
   onProgressFoldersOption2,
   onSubPhaseProgressSharepointList,
 } from "./CountFiles";
-
 import { updateNationColumn } from "./UpdateNation";
-
 import {
   SPHttpClient,
   SPHttpClientResponse,
   ISPHttpClientOptions,
 } from "@microsoft/sp-http";
-
 import { __metadata } from "tslib";
 
 //Global
@@ -42,11 +39,9 @@ const manageRolesValue = [
 export interface IHelloWorldWebPartProps {
   description: string;
 }
-
 export interface ISPLists {
   value: ISPList[];
 }
-
 export interface ISPList {
   Title: string;
   Id: string;
