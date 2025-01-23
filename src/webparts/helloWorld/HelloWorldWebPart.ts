@@ -84,6 +84,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           <button class="${
             styles.qms_button
           }" id="updateProgressProject_Op2">Update Progress Project Op2</button>
+
+          <button class="${
+            styles.qms_button
+          }" id="exportData">Export Data From Sharepoint List</button>
          </div>
 
      <div class="${styles.qms_actions}" id= "qms_actions">
@@ -110,6 +114,8 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     const clickCountFilesOp2 = this.domElement.querySelector(
       "#updateProgressProject_Op2"
     );
+
+    const clickExportData = this.domElement.querySelector("#exportData");
 
     if (!actionsContainer) {
       console.error("Error");
@@ -349,6 +355,18 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
             nameSharepointSite,
             `The Progress column was updated successfully in ${nameSharepointList}`
           );
+        } catch (error) {
+          console.error("Error", error);
+        }
+      });
+    }
+
+    //Export Data from sharepoint list
+
+    if (clickExportData) {
+      clickExportData.addEventListener("click", async () => {
+        try {
+          this.exportDataFromSharepointList();
         } catch (error) {
           console.error("Error", error);
         }
@@ -1088,6 +1106,49 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         console.error("Error", error);
       });
   }
+
+  //Export Data from sharepoint list
+  private exportDataFromSharepointList = (): Promise<
+    {
+      CustomID: string;
+      ProjectName: string;
+    }[]
+  > => {
+    return this.context.spHttpClient
+      .get(
+        `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items`,
+        SPHttpClient.configurations.v1
+      )
+      .then((response: SPHttpClientResponse) => {
+        return response.json();
+      })
+      .then((data) => {
+        const exportData = data.value
+          .filter(
+            (item: any) =>
+              item.CustomID &&
+              item.ProjectName &&
+              item.Phase01Progress &&
+              item.Phase01Date &&
+              item.Phase01Review &&
+              item.Phase02Progress &&
+              item.Phase02Date &&
+              item.Phase02Review &&
+              item.Phase03Progress &&
+              item.Phase03Date &&
+              item.Phase03Review
+          )
+          .map((item: any) => ({
+            CustomID: item.CustomID,
+            ProjectName: item.Title,
+          }));
+        console.log(data.value);
+        return exportData;
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
+  };
 
   //Defaults-----------------------------------------------------------------------------------------------------------------------------------
   private getEnvironmentMessage(): Promise<string> {
