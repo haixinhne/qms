@@ -22,6 +22,7 @@
 }
 
 .qms_actions {
+  margin-bottom: 30px;
   display: inline-block;
   height: 100px;
   color: gray;
@@ -68,7 +69,7 @@ p {
 
 .helloWorld {
   text-align: center;
-  overflow: hidden;
+  overflow: auto;
   padding: 1em;
   color: "[theme:bodyText, default: #323130]";
   color: var(--bodyText);
@@ -102,4 +103,49 @@ p {
       ); // note: CSS Custom Properties support is limited to modern browsers only
     }
   }
+}
+
+.qms_display {
+  border: 1px solid #111 !important;
+}
+
+th {
+  color: black;
+  font-size: 12px;
+  border-bottom: 1px solid #111;
+  border-right: 1px solid #ddd;
+  padding: 8px 1px;
+  width: 50px !important;
+}
+
+td {
+  color: black;
+  font-size: 12px;
+  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+  padding: 5px 1px;
+  width: 50px !important;
+  height: 30px !important;
+}
+
+th:last-child,
+td:last-child {
+  border-right: none;
+}
+
+.qms_purple {
+  background-color: #ceadf6;
+  padding: 10px 2px;
+}
+
+.qms_yellow {
+  background-color: #f0fa6b;
+}
+
+.qms_orange {
+  background-color: #f6cb7a;
+}
+
+.qms_blue {
+  background-color: #9fa0f9;
 }

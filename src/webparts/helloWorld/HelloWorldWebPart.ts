@@ -19,6 +19,8 @@ import {
   onSubPhaseProgressSharepointList,
 } from "./CountFiles";
 import { updateNationColumn } from "./UpdateNation";
+import { dataFromSharepointList, initializeTable } from "./TableData.";
+//
 import {
   SPHttpClient,
   SPHttpClientResponse,
@@ -60,9 +62,9 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
      </div>
 
      <div class=${styles.qms_btn}>
-     <button class="${
-       styles.qms_button
-     }" id="createUpdateProjectList">Create/Update ProjectList</button>
+        <button class="${
+          styles.qms_button
+        }" id="createUpdateProjectList">Create/Update ProjectList</button>
 
         <button class="${
           styles.qms_button
@@ -76,7 +78,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
            styles.qms_button
          }" id="setListPermissions">Set List Permissions</button>
 
-
          <button class="${
            styles.qms_button
          }" id="updateProgressProject_Op1">Update Progress Project Op1</button>
@@ -88,13 +89,35 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
           <button class="${
             styles.qms_button
           }" id="exportData">Export Data From Sharepoint List</button>
-         </div>
+        </div>
 
      <div class="${styles.qms_actions}" id= "qms_actions">
      <p id= "qms_desc"></p>
      </div>
+      
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+
+    <table id="myTable" class="${styles.qms_display}">
+    <thead>
+      <tr>
+        <th class="${styles.qms_purple} ">Custom ID</th>        
+        <th class="${styles.qms_purple}">Project Name</th>
+        <th class="${styles.qms_purple}">Nation</th>            
+        <th class="${styles.qms_yellow}">Phase01 Date</th>
+        <th class="${styles.qms_yellow}">Phase01 Progress</th>              
+        <th class="${styles.qms_orange}">Phase02 Date</th>
+        <th class="${styles.qms_orange}">Phase02 Progress</th>        
+        <th class="${styles.qms_blue}">Phase03 Date</th>
+        <th class="${styles.qms_blue}">Phase03 Progress</th>        
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+    </table> 
+    <div>
      </section>`;
 
+    //
     const clickCreateSharepoint = this.domElement.querySelector(
       "#createUpdateProjectList"
     );
@@ -122,7 +145,10 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       return;
     }
 
-    //Event click button-------------------------------------------------------------------------------------------------------------------------
+    //Event-----------------------------------------------------------------------------------------------------------------------------------
+    //Event tạo bảng
+    initializeTable(dataFromSharepointList);
+
     //Event tạo sharepoint
     if (clickCreateSharepoint) {
       clickCreateSharepoint.addEventListener("click", async () => {
@@ -162,7 +188,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     if (setFolderPermissions) {
       setFolderPermissions.addEventListener("click", async () => {
         try {
-          const folderData = await this.getDataFromSharePointList();
+          const folderData = await this.getDataFromSharepointList();
 
           if (!folderData || folderData.length === 0) {
             console.error("Error");
@@ -362,7 +388,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     }
 
     //Export Data from sharepoint list
-
     if (clickExportData) {
       clickExportData.addEventListener("click", async () => {
         try {
@@ -866,7 +891,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Tạo các folder từ sharepoint list-------------------------------------------------------------------------------------------------------------
   //Hàm lấy data từ sharepoint list
-  private getDataFromSharePointList(): Promise<
+  private getDataFromSharepointList(): Promise<
     { folderName: string; subFolderName: string; customId: string }[]
   > {
     return this.context.spHttpClient
@@ -1025,7 +1050,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Event tạo folder
   private onCreateFolder(): Promise<any> {
-    return this.getDataFromSharePointList()
+    return this.getDataFromSharepointList()
       .then((folderPairs) => {
         const subFolder = folderPairs.map(({ subFolderName }) => subFolderName);
         const createSubFolder = subFolder.map((subFolderName) =>
@@ -1045,7 +1070,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Event update cột Nation ---------------------------------------------------------------------------------------------------------------------------
   private onUpdateNationColumn(): Promise<any> {
-    return this.getDataFromSharePointList()
+    return this.getDataFromSharepointList()
       .then((folderValues) => {
         if (!folderValues || folderValues.length === 0) {
           return Promise.reject("No folder data found");
@@ -1107,7 +1132,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
   }
 
-  //Export Data from sharepoint list
+  //Export Data from sharepoint list------------------------------------------------------------------------------------------------------------------------------
   private exportDataFromSharepointList = (): Promise<
     {
       CustomID: string;
