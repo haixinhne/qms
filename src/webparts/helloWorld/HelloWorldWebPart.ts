@@ -19,7 +19,8 @@ import {
   onSubPhaseProgressSharepointList,
 } from "./CountFiles";
 import { updateNationColumn } from "./UpdateNation";
-import { dataFromSharepointList, initializeTable } from "./TableData.";
+import { initializeTableFromSharepoint } from "./TableData";
+
 //
 import {
   SPHttpClient,
@@ -61,7 +62,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         <h3>Management Function</h3>
      </div>
 
-     <div class=${styles.qms_btn}>
+     <div class="${styles.qms_btn}">
         <button class="${
           styles.qms_button
         }" id="createUpdateProjectList">Create/Update ProjectList</button>
@@ -88,33 +89,31 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
           <button class="${
             styles.qms_button
-          }" id="exportData">Export Data From Sharepoint List</button>
-        </div>
+          }" id="updateTable">Update Table From Sharepoint List</button>
+      </div>
 
      <div class="${styles.qms_actions}" id= "qms_actions">
-     <p id= "qms_desc"></p>
+      <p id= "qms_desc"></p>
      </div>
       
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
-
-    <table id="myTable" class="${styles.qms_display}">
-    <thead>
-      <tr>
-        <th class="${styles.qms_purple} ">Custom ID</th>        
-        <th class="${styles.qms_purple}">Project Name</th>
-        <th class="${styles.qms_purple}">Nation</th>            
-        <th class="${styles.qms_yellow}">Phase01 Date</th>
-        <th class="${styles.qms_yellow}">Phase01 Progress</th>              
-        <th class="${styles.qms_orange}">Phase02 Date</th>
-        <th class="${styles.qms_orange}">Phase02 Progress</th>        
-        <th class="${styles.qms_blue}">Phase03 Date</th>
-        <th class="${styles.qms_blue}">Phase03 Progress</th>        
-      </tr>
-    </thead>
-    <tbody>
-    </tbody>
-    </table> 
-    <div>
+      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+      <table id="tableDataSharepointList" class="${styles.qms_display}">
+        <thead>
+          <tr>
+          <th class="${styles.qms_purple} ">Custom ID</th>        
+          <th class="${styles.qms_purple}">Project Name</th>
+          <th class="${styles.qms_purple}">Nation</th>            
+          <th class="${styles.qms_yellow}">Phase01 Date</th>
+          <th class="${styles.qms_yellow}">Phase01 Progress</th>              
+          <th class="${styles.qms_orange}">Phase02 Date</th>
+          <th class="${styles.qms_orange}">Phase02 Progress</th>        
+          <th class="${styles.qms_blue}">Phase03 Date</th>
+          <th class="${styles.qms_blue}">Phase03 Progress</th>        
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>     
      </section>`;
 
     //
@@ -138,7 +137,7 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       "#updateProgressProject_Op2"
     );
 
-    const clickExportData = this.domElement.querySelector("#exportData");
+    const updateTable = this.domElement.querySelector("#updateTable");
 
     if (!actionsContainer) {
       console.error("Error");
@@ -146,9 +145,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
     }
 
     //Event-----------------------------------------------------------------------------------------------------------------------------------
-    //Event tạo bảng
-    initializeTable(dataFromSharepointList);
-
     //Event tạo sharepoint
     if (clickCreateSharepoint) {
       clickCreateSharepoint.addEventListener("click", async () => {
@@ -387,11 +383,15 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
       });
     }
 
-    //Export Data from sharepoint list
-    if (clickExportData) {
-      clickExportData.addEventListener("click", async () => {
+    //Event tạo, cập nhật bảng
+    if (updateTable) {
+      updateTable.addEventListener("click", async () => {
         try {
-          this.exportDataFromSharepointList();
+          initializeTableFromSharepoint(
+            this.context.spHttpClient,
+            sharepointUrl,
+            nameSharepointList
+          );
         } catch (error) {
           console.error("Error", error);
         }
@@ -403,15 +403,25 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
 
   //Hàm defaults--------------------------------------------------------------------------------------------------------------------------------
   protected onInit(): Promise<any> {
-    return this.getEnvironmentMessage().then(() => {
-      return getUserName(this.context.spHttpClient, sharepointUrl).then(() => {
-        displayJsonContent(
+    return this.getEnvironmentMessage()
+      .then(() => {
+        return getUserName(this.context.spHttpClient, sharepointUrl).then(
+          () => {
+            displayJsonContent(
+              this.context.spHttpClient,
+              sharepointUrl,
+              nameSharepointSite
+            );
+          }
+        );
+      })
+      .then(() => {
+        return initializeTableFromSharepoint(
           this.context.spHttpClient,
           sharepointUrl,
-          nameSharepointSite
+          nameSharepointList
         );
       });
-    });
   }
 
   private _renderList(items: ISPList[]): void {
@@ -1131,49 +1141,6 @@ export default class HelloWorldWebPart extends BaseClientSideWebPart<IHelloWorld
         console.error("Error", error);
       });
   }
-
-  //Export Data from sharepoint list------------------------------------------------------------------------------------------------------------------------------
-  private exportDataFromSharepointList = (): Promise<
-    {
-      CustomID: string;
-      ProjectName: string;
-    }[]
-  > => {
-    return this.context.spHttpClient
-      .get(
-        `${sharepointUrl}/_api/web/lists/GetByTitle('${nameSharepointList}')/items`,
-        SPHttpClient.configurations.v1
-      )
-      .then((response: SPHttpClientResponse) => {
-        return response.json();
-      })
-      .then((data) => {
-        const exportData = data.value
-          .filter(
-            (item: any) =>
-              item.CustomID &&
-              item.ProjectName &&
-              item.Phase01Progress &&
-              item.Phase01Date &&
-              item.Phase01Review &&
-              item.Phase02Progress &&
-              item.Phase02Date &&
-              item.Phase02Review &&
-              item.Phase03Progress &&
-              item.Phase03Date &&
-              item.Phase03Review
-          )
-          .map((item: any) => ({
-            CustomID: item.CustomID,
-            ProjectName: item.Title,
-          }));
-        console.log(data.value);
-        return exportData;
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-      });
-  };
 
   //Defaults-----------------------------------------------------------------------------------------------------------------------------------
   private getEnvironmentMessage(): Promise<string> {
